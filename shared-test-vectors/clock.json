@@ -1,0 +1,54 @@
+{
+  "sequences": [
+    {
+      "name": "same boot ignores wall-clock changes",
+      "steps": [
+        { "sample": { "wallMs": 1000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 1000000 },
+        { "sample": { "wallMs": 5000000, "monoMs": 6000, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 1001000 },
+        { "sample": { "wallMs": 10, "monoMs": 7000, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 1002000 }
+      ]
+    },
+    {
+      "name": "reboot with automatic time trusts the wall clock",
+      "steps": [
+        { "sample": { "wallMs": 1000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 1000000 },
+        { "sample": { "wallMs": 2000000, "monoMs": 1000, "bootId": "b2", "networkMs": null, "wallTrusted": true }, "expect": 2000000 }
+      ]
+    },
+    {
+      "name": "reboot with manual time fails closed",
+      "steps": [
+        { "sample": { "wallMs": 1000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": false }, "expect": 1000000 },
+        { "sample": { "wallMs": 9000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": false }, "expect": 1000000 },
+        { "sample": { "wallMs": 9000000, "monoMs": 2000, "bootId": "b2", "networkMs": null, "wallTrusted": false }, "expect": 1002000 }
+      ]
+    },
+    {
+      "name": "reboot prefers network time",
+      "steps": [
+        { "sample": { "wallMs": 1000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 1000000 },
+        { "sample": { "wallMs": 9999999, "monoMs": 100, "bootId": "b2", "networkMs": 3000000, "wallTrusted": false }, "expect": 3000000 }
+      ]
+    },
+    {
+      "name": "trusted time never goes backwards",
+      "steps": [
+        { "sample": { "wallMs": 5000000, "monoMs": 0, "bootId": "b1", "networkMs": null, "wallTrusted": true }, "expect": 5000000 },
+        { "sample": { "wallMs": 4000000, "monoMs": 10, "bootId": "b2", "networkMs": null, "wallTrusted": true }, "expect": 5000000 }
+      ]
+    },
+    {
+      "name": "monotonic clock going backwards counts as a reboot",
+      "steps": [
+        { "sample": { "wallMs": 1000000, "monoMs": 5000, "bootId": "b1", "networkMs": null, "wallTrusted": false }, "expect": 1000000 },
+        { "sample": { "wallMs": 9000000, "monoMs": 4000, "bootId": "b1", "networkMs": null, "wallTrusted": false }, "expect": 1004000 }
+      ]
+    },
+    {
+      "name": "first reading prefers network time",
+      "steps": [
+        { "sample": { "wallMs": 1, "monoMs": 0, "bootId": "b1", "networkMs": 7000000, "wallTrusted": false }, "expect": 7000000 }
+      ]
+    }
+  ]
+}

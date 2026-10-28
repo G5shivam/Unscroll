@@ -1,0 +1,10 @@
+<resources>
+  <!--
+    Cover the Settings pages that could switch Unscroll off during Focus.
+    OFF by default: Google Play's Accessibility policy does not allow apps to
+    prevent users from disabling or uninstalling an app or service. Turn on only
+    for builds distributed outside Google Play, via the config plugin option
+    ["./plugins/withUnscrollAndroid", { "settingsGuard": true }].
+  -->
+  <bool name="unscroll_settings_guard">false</bool>
+</resources>

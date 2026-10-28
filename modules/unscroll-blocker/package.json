@@ -1,0 +1,7 @@
+{
+  "name": "unscroll-blocker",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "Unscroll native enforcement: Android Accessibility blocker and iOS Screen Time shield."
+}

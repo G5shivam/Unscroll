@@ -1,0 +1,14 @@
+appId: com.android.settings
+name: During focus, the pages that could switch Unscroll off are covered
+---
+# Run after 03 while the session is still active.
+- launchApp
+- tapOn: "Apps"
+- tapOn:
+    text: "See all.*"
+    optional: true
+- tapOn: "Unscroll"
+- assertVisible: "Locked during focus"
+- launchApp
+- tapOn: "Accessibility"
+- assertVisible: "Locked during focus"

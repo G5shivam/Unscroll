@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Instagram-like fixture</title>
+  </head>
+  <body>
+    <!-- A minimal single-page app shaped like instagram.com's navigation. -->
+    <nav>
+      <a id="home" href="/">Home</a>
+      <a id="explore" href="/explore/">Explore</a>
+      <a id="reels" href="/reels/">Reels</a>
+      <a id="dm" href="/direct/inbox/">Messages</a>
+      <a id="profile" href="/some.friend/">Profile</a>
+    </nav>
+    <main id="view"></main>
+    <script>
+      // SPA router: links navigate with history.pushState, like Instagram.
+      document.addEventListener('click', (e) => {
+        const a = e.target.closest('a');
+        if (!a || e.defaultPrevented) return;
+        e.preventDefault();
+        history.pushState({}, '', a.getAttribute('href'));
+        render();
+      });
+      function render() {
+        document.getElementById('view').textContent = 'Page: ' + location.pathname;
+      }
+      window.addEventListener('popstate', render);
+      render();
+      // Instagram adds links dynamically (e.g. a Reel shared in a chat).
+      window.addReelLink = () => {
+        const a = document.createElement('a');
+        a.id = 'late-reel';
+        a.href = '/reel/C0FFEE/';
+        a.textContent = 'Shared reel';
+        document.body.appendChild(a);
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,94 @@
+{
+  "expo": {
+    "name": "Unscroll",
+    "slug": "unscroll",
+    "version": "1.0.0",
+    "scheme": "unscroll",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.unscroll.app",
+      "supportsTablet": false,
+      "entitlements": {
+        "com.apple.developer.family-controls": true
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.unscroll.app",
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#14213D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#EEF1F4"
+        }
+      ],
+      "./plugins/withUnscrollAndroid",
+      "./plugins/withUnscrollIos",
+      "@bacons/apple-targets",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "ShieldConfiguration",
+                  "bundleIdentifier": "com.unscroll.app.ShieldConfiguration",
+                  "entitlements": {
+                    "com.apple.developer.family-controls": true
+                  }
+                },
+                {
+                  "targetName": "ShieldAction",
+                  "bundleIdentifier": "com.unscroll.app.ShieldAction",
+                  "entitlements": {
+                    "com.apple.developer.family-controls": true
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

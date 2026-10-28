@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Events are delivered ONLY for these packages: Instagram, supported browsers,
+  and the Settings apps whose pages could switch Unscroll off.
+  Keep in sync with DetectionRules.DEFAULT in ScreenClassifier.kt.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/unscroll_service_description"
+  android:summary="@string/unscroll_service_summary"
+  android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewSelected|typeViewScrolled|typeWindowsChanged"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:accessibilityFlags="flagReportViewIds"
+  android:canRetrieveWindowContent="true"
+  android:notificationTimeout="120"
+  android:packageNames="com.instagram.android,com.instagram.lite,com.android.chrome,com.chrome.beta,com.brave.browser,com.microsoft.emmx,com.sec.android.app.sbrowser,org.mozilla.firefox,com.opera.browser,com.opera.mini.native,com.duckduckgo.mobile.android,com.mi.globalbrowser,com.vivo.browser,com.heytap.browser,com.UCMobile.intl,com.vivaldi.browser,com.kiwibrowser.browser,org.mozilla.focus,com.android.settings,com.miui.securitycenter,com.coloros.safecenter" />

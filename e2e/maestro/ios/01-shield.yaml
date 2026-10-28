@@ -1,0 +1,10 @@
+appId: com.unscroll.app
+name: The official Instagram app is shielded; Clean Instagram works
+---
+- launchApp
+- tapOn: { id: "open-clean-instagram" }
+- assertVisible: "Feed and Reels hidden"
+- back
+- launchApp:
+    appId: com.burbn.instagram
+- assertVisible: "Open Instagram in Unscroll"

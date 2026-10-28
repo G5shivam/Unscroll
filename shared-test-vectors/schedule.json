@@ -1,0 +1,54 @@
+{
+  "schedules": {
+    "A": { "id": "a", "name": "Study", "days": 62, "startMin": 540, "endMin": 780 },
+    "B": { "id": "b", "name": "Night", "days": 32, "startMin": 1380, "endMin": 420 },
+    "C": { "id": "c", "name": "Late", "days": 127, "startMin": 1320, "endMin": 60 }
+  },
+  "minutesUntilEnd": [
+    { "s": "A", "dow": 1, "minute": 540, "expect": 240 },
+    { "s": "A", "dow": 1, "minute": 779, "expect": 1 },
+    { "s": "A", "dow": 1, "minute": 780, "expect": -1 },
+    { "s": "A", "dow": 1, "minute": 539, "expect": -1 },
+    { "s": "A", "dow": 0, "minute": 600, "expect": -1 },
+    { "s": "A", "dow": 6, "minute": 600, "expect": -1 },
+    { "s": "A", "dow": 5, "minute": 600, "expect": 180 },
+    { "s": "B", "dow": 5, "minute": 1380, "expect": 480 },
+    { "s": "B", "dow": 5, "minute": 1379, "expect": -1 },
+    { "s": "B", "dow": 6, "minute": 0, "expect": 420 },
+    { "s": "B", "dow": 6, "minute": 419, "expect": 1 },
+    { "s": "B", "dow": 6, "minute": 420, "expect": -1 },
+    { "s": "B", "dow": 4, "minute": 1400, "expect": -1 },
+    { "s": "B", "dow": 5, "minute": 100, "expect": -1 },
+    { "s": "C", "dow": 0, "minute": 30, "expect": 30 },
+    { "s": "C", "dow": 0, "minute": 1320, "expect": 180 },
+    { "s": "C", "dow": 3, "minute": 60, "expect": -1 }
+  ],
+  "coversSuperset": [
+    { "prev": "A", "next": { "id": "a", "name": "Study", "days": 62, "startMin": 540, "endMin": 840 }, "expect": true },
+    { "prev": "A", "next": { "id": "a", "name": "Study", "days": 62, "startMin": 540, "endMin": 720 }, "expect": false },
+    { "prev": "A", "next": { "id": "a", "name": "Study", "days": 127, "startMin": 540, "endMin": 780 }, "expect": true },
+    { "prev": "A", "next": { "id": "a", "name": "Study", "days": 30, "startMin": 540, "endMin": 780 }, "expect": false },
+    { "prev": "A", "next": { "id": "a", "name": "Study", "days": 62, "startMin": 480, "endMin": 60 }, "expect": true },
+    { "prev": "B", "next": { "id": "b", "name": "Night", "days": 32, "startMin": 1320, "endMin": 480 }, "expect": true },
+    { "prev": "B", "next": { "id": "b", "name": "Night", "days": 32, "startMin": 1380, "endMin": 360 }, "expect": false },
+    { "prev": "B", "next": { "id": "b", "name": "Night", "days": 64, "startMin": 1380, "endMin": 420 }, "expect": false }
+  ],
+  "validate": [
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 0, "endMin": 15 }, "ok": true },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 0, "endMin": 14 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 600, "endMin": 600 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 0, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 128, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "bad id", "name": "A", "days": 1, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "", "days": 1, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "   ", "days": 1, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "12345678901234567890123456789012345678901", "days": 1, "startMin": 0, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "\u0007Study", "days": 1, "startMin": 0, "endMin": 60 }, "ok": true, "name": "Study" },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 1440, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 10.5, "endMin": 60 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": "540", "endMin": 600 }, "ok": false },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 1430, "endMin": 5 }, "ok": true },
+    { "input": { "id": "x", "name": "A", "days": 1, "startMin": 1430, "endMin": 4 }, "ok": false },
+    { "input": "not an object", "ok": false }
+  ]
+}

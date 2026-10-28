@@ -1,0 +1,12 @@
+appId: com.instagram.android
+name: Reels and the feed are covered, DMs are not
+---
+- launchApp
+- tapOn:
+    text: "Reels"
+- assertVisible: "Reels are hidden"
+- tapOn: "Go to messages"
+- assertNotVisible: "Reels are hidden"
+- tapOn:
+    text: "Home"
+- assertVisible: "The feed is hidden"

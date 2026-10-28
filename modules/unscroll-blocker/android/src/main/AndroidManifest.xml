@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+  <application>
+    <!-- Bound only by the system: BIND_ACCESSIBILITY_SERVICE is a system permission. -->
+    <service
+      android:name="com.unscroll.blocker.BlockerAccessibilityService"
+      android:exported="true"
+      android:label="@string/unscroll_service_label"
+      android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService" />
+      </intent-filter>
+      <meta-data
+        android:name="android.accessibilityservice"
+        android:resource="@xml/unscroll_accessibility_service" />
+    </service>
+
+    <!-- Not exported: only the system delivers these protected broadcasts. -->
+    <receiver
+      android:name="com.unscroll.blocker.BootReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

@@ -1,0 +1,5 @@
+<resources>
+  <string name="unscroll_service_label">Unscroll</string>
+  <string name="unscroll_service_summary">Hides Instagram\'s feed and Reels, and locks Instagram during focus.</string>
+  <string name="unscroll_service_description">Unscroll reads the screen only in Instagram, web browsers, and the Settings pages that could switch Unscroll off. It uses this to hide the feed, Reels and Explore, and to lock Instagram during your focus hours. Screen content is checked on your phone and discarded immediately. Nothing is stored or sent anywhere.</string>
+</resources>

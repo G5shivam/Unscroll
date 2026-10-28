@@ -1,0 +1,8 @@
+appId: com.unscroll.app
+name: Rule 3 - uninstalling must always remain possible, even during focus
+---
+# Long-press the launcher icon and uninstall; the package installer is never covered.
+- pressKey: Home
+- longPressOn: "Unscroll"
+- tapOn: "Uninstall|App info"
+- assertNotVisible: "Locked during focus"

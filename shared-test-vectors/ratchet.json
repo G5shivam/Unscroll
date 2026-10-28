@@ -1,0 +1,262 @@
+{
+  "now": 200000000,
+  "current": {
+    "surfaces": {
+      "feed": true,
+      "reels": true,
+      "explore": true,
+      "stories": false
+    },
+    "schedules": [
+      {
+        "id": "a",
+        "name": "Study",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 780
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "block stories (stricter)",
+      "patch": {
+        "surfaces": {
+          "stories": true
+        }
+      },
+      "grants": [],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "add a schedule",
+      "addSchedule": {
+        "id": "b",
+        "name": "Night",
+        "days": 32,
+        "startMin": 1380,
+        "endMin": 420
+      },
+      "grants": [],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "unblock reels without grant",
+      "patch": {
+        "surfaces": {
+          "reels": false
+        }
+      },
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "unblock reels with grant exactly 24h old",
+      "patch": {
+        "surfaces": {
+          "reels": false
+        }
+      },
+      "grants": [
+        {
+          "id": "g",
+          "kind": "surface-off",
+          "surface": "reels",
+          "waitedMs": 86400000
+        }
+      ],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "unblock reels with grant 1ms too young",
+      "patch": {
+        "surfaces": {
+          "reels": false
+        }
+      },
+      "grants": [
+        {
+          "id": "g",
+          "kind": "surface-off",
+          "surface": "reels",
+          "waitedMs": 86399999
+        }
+      ],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "unblock reels during focus even with grant",
+      "patch": {
+        "surfaces": {
+          "reels": false
+        }
+      },
+      "grants": [
+        {
+          "id": "g",
+          "kind": "surface-off",
+          "surface": "reels",
+          "waitedMs": 199999999
+        }
+      ],
+      "focus": true,
+      "ok": false
+    },
+    {
+      "name": "grant for a different surface does not count",
+      "patch": {
+        "surfaces": {
+          "reels": false
+        }
+      },
+      "grants": [
+        {
+          "id": "g",
+          "kind": "surface-off",
+          "surface": "explore",
+          "waitedMs": 199999999
+        }
+      ],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "delete schedule without grant",
+      "removeSchedule": "a",
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "delete schedule with only an edit grant",
+      "removeSchedule": "a",
+      "grants": [
+        {
+          "id": "g",
+          "kind": "schedule-edit",
+          "scheduleId": "a",
+          "waitedMs": 199999999
+        }
+      ],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "delete schedule with matured delete grant",
+      "removeSchedule": "a",
+      "grants": [
+        {
+          "id": "g",
+          "kind": "schedule-delete",
+          "scheduleId": "a",
+          "waitedMs": 199999999
+        }
+      ],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "shorten schedule with matured edit grant",
+      "replaceSchedule": {
+        "id": "a",
+        "name": "Study",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 720
+      },
+      "grants": [
+        {
+          "id": "g",
+          "kind": "schedule-edit",
+          "scheduleId": "a",
+          "waitedMs": 199999999
+        }
+      ],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "shorten schedule without grant",
+      "replaceSchedule": {
+        "id": "a",
+        "name": "Study",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 720
+      },
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "widen schedule without grant",
+      "replaceSchedule": {
+        "id": "a",
+        "name": "Study",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 840
+      },
+      "grants": [],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "widen schedule during focus",
+      "replaceSchedule": {
+        "id": "a",
+        "name": "Study",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 840
+      },
+      "grants": [],
+      "focus": true,
+      "ok": true
+    },
+    {
+      "name": "rename only",
+      "replaceSchedule": {
+        "id": "a",
+        "name": "Deep work",
+        "days": 62,
+        "startMin": 540,
+        "endMin": 780
+      },
+      "grants": [],
+      "focus": true,
+      "ok": true
+    },
+    {
+      "name": "invalid incoming schedule",
+      "addSchedule": {
+        "id": "z",
+        "name": "Bad",
+        "days": 1,
+        "startMin": 600,
+        "endMin": 600
+      },
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "duplicate schedule ids",
+      "addSchedule": {
+        "id": "a",
+        "name": "Copy",
+        "days": 1,
+        "startMin": 0,
+        "endMin": 60
+      },
+      "grants": [],
+      "focus": false,
+      "ok": false
+    }
+  ]
+}

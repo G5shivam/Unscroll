@@ -1,0 +1,23 @@
+{
+  "sequences": [
+    {
+      "name": "same boot consumes monotonic time and completes",
+      "start": { "id": "s", "durationMs": 3600000, "consumedMs": 0, "lastMono": 1000, "lastBootId": "b1", "completed": false },
+      "ticks": [
+        { "monoMs": 61000, "bootId": "b1", "consumedMs": 60000, "completed": false },
+        { "monoMs": 3601000, "bootId": "b1", "consumedMs": 3600000, "completed": true },
+        { "monoMs": 9999999, "bootId": "b1", "consumedMs": 3600000, "completed": true }
+      ]
+    },
+    {
+      "name": "powered-off time does not count",
+      "start": { "id": "s", "durationMs": 3600000, "consumedMs": 0, "lastMono": 100000, "lastBootId": "b1", "completed": false },
+      "ticks": [{ "monoMs": 5000, "bootId": "b2", "consumedMs": 5000, "completed": false }]
+    },
+    {
+      "name": "monotonic going backwards on the same boot is treated as a reboot",
+      "start": { "id": "s", "durationMs": 3600000, "consumedMs": 0, "lastMono": 100000, "lastBootId": "b1", "completed": false },
+      "ticks": [{ "monoMs": 50000, "bootId": "b1", "consumedMs": 50000, "completed": false }]
+    }
+  ]
+}

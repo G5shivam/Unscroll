@@ -1,0 +1,24 @@
+appId: com.unscroll.app
+name: Onboarding turns on blocking
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Keep your messages."
+- tapOn: { id: "get-started" }
+- assertVisible: "What Unscroll can see"
+- tapOn: { id: "consent-check" }
+- tapOn: { id: "agree-continue" }
+- tapOn: { id: "perm-open" }
+# Android Accessibility settings: turn Unscroll on
+- tapOn: "Unscroll"
+- tapOn:
+    text: "Use Unscroll"
+- tapOn:
+    text: "Allow|OK"
+    optional: true
+- back
+- back
+- assertVisible: "On"
+- tapOn: { id: "permissions-continue" }
+- tapOn: { id: "finish-setup" }
+- assertVisible: { id: "lock-panel-open" }

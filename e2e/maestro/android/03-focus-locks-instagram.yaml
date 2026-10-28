@@ -1,0 +1,12 @@
+appId: com.unscroll.app
+name: A focus session locks Instagram and cannot be stopped
+---
+- launchApp
+- tapOn: { id: "start-focus" }
+- tapOn: { id: "preset-25" }
+- longPressOn: { id: "hold-to-lock" }
+- assertVisible: { id: "lock-panel-locked" }
+- assertNotVisible: "Stop"
+- launchApp:
+    appId: com.instagram.android
+- assertVisible: "Instagram is locked"
