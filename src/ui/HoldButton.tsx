@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { t } from '../i18n';
 import { haptic } from './haptics';
 import { Text } from './Text';
 import { color, radius, touch } from './theme';
@@ -13,7 +14,7 @@ export const HOLD_MS = 3000;
  */
 export function HoldButton({
   label,
-  holdingLabel = 'Keep holding…',
+  holdingLabel = t('holding'),
   onComplete,
   disabled,
   testID,
@@ -81,14 +82,14 @@ export function HoldButton({
       <Pressable
         testID={testID}
         accessibilityRole="button"
-        accessibilityLabel={armed ? 'Confirm lock' : label}
-        accessibilityHint={armed ? 'Starts the lock. It cannot be stopped.' : 'Double tap, then confirm.'}
+        accessibilityLabel={armed ? t('confirm_lock') : label}
+        accessibilityHint={armed ? t('confirm_hint') : t('hold_hint')}
         disabled={disabled}
         onPress={() => (armed ? onComplete() : setArmed(true))}
         style={[styles.base, disabled && styles.disabled]}
       >
         <Text variant="bodyStrong" style={styles.label}>
-          {armed ? 'Confirm lock' : label}
+          {armed ? t('confirm_lock') : label}
         </Text>
       </Pressable>
     );

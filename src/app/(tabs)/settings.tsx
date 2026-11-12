@@ -1,7 +1,10 @@
 import Constants from 'expo-constants';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
+import { SURFACES as SURFACE_KEYS } from '../../core/types';
 import type { Surface } from '../../core/types';
+import { t } from '../../i18n';
+import { surfaceName } from '../../ui/copy';
 import { useController, useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
 import { formatUntil } from '../../ui/format';
@@ -9,14 +12,6 @@ import { Group, Notice, Row, Screen, Toggle } from '../../ui/primitives';
 import { Text } from '../../ui/Text';
 import { space } from '../../ui/theme';
 
-const SURFACES: { key: Surface; title: string }[] = [
-  { key: 'feed', title: 'Home feed' },
-  { key: 'reels', title: 'Reels' },
-  { key: 'explore', title: 'Explore' },
-  { key: 'stories', title: 'Stories' },
-];
-
-const SURFACE_NAME: Record<Surface, string> = { feed: 'Home feed', reels: 'Reels', explore: 'Explore', stories: 'Stories' };
 
 export default function Settings() {
   const { state, now, status, enforcerSynced } = useUnscroll();
@@ -26,38 +21,39 @@ export default function Settings() {
 
   const toggle = async (key: Surface, hide: boolean) => {
     const r = await ctrl.setSurface(key, hide);
-    if (!r.ok) setMessage('That change could not be saved. Try again.');
-    else if (r.applied === 'pending') setMessage(`${SURFACE_NAME[key]} will show again in 24 hours. You can cancel before then.`);
+    if (!r.ok) setMessage(t('msg_failed'));
+    else if (r.applied === 'pending') setMessage(t('msg_pending', { name: surfaceName(key) }));
     else setMessage(null);
   };
 
   const describe = (p: (typeof state.pending)[number]) => {
-    if (p.kind === 'surface-off' && p.surface) return `Show ${SURFACE_NAME[p.surface]} again`;
+    if (p.kind === 'surface-off' && p.surface) return t('pending_show', { name: surfaceName(p.surface) });
     const s = state.policy.schedules.find((x) => x.id === p.scheduleId);
-    const name = s ? s.name : 'schedule';
-    return p.kind === 'schedule-delete' ? `Remove “${name}”` : `Change “${name}”`;
+    const name = s ? s.name : t('schedule_fallback');
+    return p.kind === 'schedule-delete' ? t('pending_remove', { name }) : t('pending_change', { name });
   };
 
   return (
-    <Screen title="Settings" testID="screen-settings">
+    <Screen title={t('settings_title')} testID="screen-settings">
       {message ? (
         <View style={{ marginBottom: space.xl }}>
-          <Notice tone="pending" icon="clock" title="Waiting 24 hours" body={message} testID="settings-message" />
+          <Notice tone="pending" icon="clock" title={t('waiting_title')} body={message} testID="settings-message" />
         </View>
       ) : null}
 
-      <Group label="Hidden in Instagram" note="Hiding more takes effect now. Showing something again takes 24 hours.">
-        {SURFACES.map((s) => {
+      <Group label={t('hidden_group')} note={t('hidden_note')}>
+        {SURFACE_KEYS.map((key) => {
+          const s = { key, title: surfaceName(key) };
           const pending = state.pending.find((p) => p.kind === 'surface-off' && p.surface === s.key);
           return (
             <Row
               key={s.key}
               title={s.title}
-              detail={pending ? `Shows again ${formatUntil(pending.effectiveAt, now)}` : undefined}
+              detail={pending ? t('shows_again', { when: formatUntil(pending.effectiveAt, now) }) : undefined}
               right={
                 <Toggle
                   testID={`surface-${s.key}`}
-                  label={`Hide ${s.title}`}
+                  label={t('hide_x', { name: s.title })}
                   value={state.policy.surfaces[s.key] && !pending}
                   onChange={(v) => void toggle(s.key, v)}
                 />
@@ -68,7 +64,7 @@ export default function Settings() {
       </Group>
 
       {state.pending.length > 0 ? (
-        <Group label="Waiting to take effect">
+        <Group label={t('waiting_group')}>
           {state.pending.map((p) => (
             <Row
               key={p.id}
@@ -78,7 +74,7 @@ export default function Settings() {
               right={
                 <Button
                   kind="secondary"
-                  label="Cancel"
+                  label={t('cancel')}
                   testID={`cancel-${p.id}`}
                   onPress={() => void ctrl.cancelPending(p.id)}
                   style={{ minHeight: 40, paddingHorizontal: space.lg }}
@@ -89,23 +85,23 @@ export default function Settings() {
         </Group>
       ) : null}
 
-      <Group label="Protection">
+      <Group label={t('protection')}>
         <Row
           icon="shield"
-          title={IOS ? 'Screen Time access' : 'Blocking service'}
+          title={IOS ? t('screen_time_access') : t('blocking_service')}
           detail={
             !status?.blockerEnabled
-              ? 'Off — Instagram is not blocked'
+              ? t('prot_off')
               : enforcerSynced
-                ? 'On'
-                : 'On — confirming your latest change'
+                ? t('on')
+                : t('prot_confirming')
           }
           testID="protection-row"
           right={
             status?.blockerEnabled ? undefined : (
               <Button
                 kind="secondary"
-                label="Turn on"
+                label={t('turn_on')}
                 onPress={() => void ctrl.requestPermission()}
                 style={{ minHeight: 40, paddingHorizontal: space.lg }}
               />
@@ -115,40 +111,40 @@ export default function Settings() {
         {!IOS ? (
           <Row
             icon="battery-charging"
-            title="Background running"
-            detail="Stops your phone from switching Unscroll off"
+            title={t('bg_title')}
+            detail={t('bg_detail')}
             onPress={() => void ctrl.openBatterySettings()}
           />
         ) : null}
       </Group>
 
-      <Group label="Privacy">
-        <Row icon="smartphone" title="Nothing leaves this phone" detail="No account, no server, no ads." />
+      <Group label={t('privacy')}>
+        <Row icon="smartphone" title={t('nothing_leaves')} detail={t('no_account')} />
         <Row
           icon="eye"
-          title="What Unscroll checks"
+          title={t('what_checks')}
           detail={
             IOS
-              ? 'Apple’s Screen Time locks Instagram. Unscroll never sees your activity.'
-              : 'Screens in Instagram, browsers and the Settings pages that could switch Unscroll off. Nothing is stored.'
+              ? t('checks_ios')
+              : t('checks_android')
           }
         />
       </Group>
 
-      <Group label="Leaving Unscroll">
+      <Group label={t('leaving')}>
         <Row
           icon="trash-2"
-          title="Uninstall to remove every block"
+          title={t('uninstall_title')}
           detail={
             IOS
-              ? 'Delete Unscroll from your Home Screen. Turning off Screen Time access also ends it and resets your streak.'
-              : 'Uninstall Unscroll, or switch it off in Settings › Accessibility. Either one ends a lock and resets your streak.'
+              ? t('uninstall_ios')
+              : t('uninstall_android')
           }
         />
       </Group>
 
       <Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>
-        Unscroll {Constants.expoConfig?.version ?? '1.0.0'}
+        {t('version', { v: Constants.expoConfig?.version ?? '1.0.0' })}
       </Text>
     </Screen>
   );

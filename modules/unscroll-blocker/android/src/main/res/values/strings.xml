@@ -1,5 +1,24 @@
 <resources>
-  <string name="unscroll_service_label">Unscroll</string>
-  <string name="unscroll_service_summary">Hides Instagram\'s feed and Reels, and locks Instagram during focus.</string>
+  <string name="unscroll_service_label" translatable="false">Unscroll</string>
+  <string name="unscroll_service_summary">Hides Instagram’s feed and Reels, and locks Instagram during focus.</string>
   <string name="unscroll_service_description">Unscroll reads the screen only in Instagram, web browsers, and the Settings pages that could switch Unscroll off. It uses this to hide the feed, Reels and Explore, and to lock Instagram during your focus hours. Screen content is checked on your phone and discarded immediately. Nothing is stored or sent anywhere.</string>
+  <string name="unscroll_overlay_locked_title">Instagram is locked</string>
+  <string name="unscroll_overlay_locked_body">Your focus ends in %1$s. Unscroll has no stop button.</string>
+  <string name="unscroll_overlay_settings_title">Locked during focus</string>
+  <string name="unscroll_overlay_settings_body">This setting could switch Unscroll off, so it’s unavailable for %1$s.</string>
+  <string name="unscroll_overlay_reels_title">Reels are hidden</string>
+  <string name="unscroll_overlay_reels_body">Your messages are still here.</string>
+  <string name="unscroll_overlay_feed_title">The feed is hidden</string>
+  <string name="unscroll_overlay_feed_body">Messages, posting and your profile still work.</string>
+  <string name="unscroll_overlay_explore_title">Explore is hidden</string>
+  <string name="unscroll_overlay_explore_body">Search for someone from your messages instead.</string>
+  <string name="unscroll_overlay_stories_title">Stories are hidden</string>
+  <string name="unscroll_overlay_stories_body">You chose to hide Stories in Unscroll.</string>
+  <string name="unscroll_overlay_hidden_title">Hidden</string>
+  <string name="unscroll_overlay_btn_messages">Go to messages</string>
+  <string name="unscroll_overlay_btn_back">Go back</string>
+  <string name="unscroll_overlay_btn_home">Go to home screen</string>
+  <string name="unscroll_dur_min">%1$d min</string>
+  <string name="unscroll_dur_h">%1$d h</string>
+  <string name="unscroll_dur_h_min">%1$d h %2$d min</string>
 </resources>

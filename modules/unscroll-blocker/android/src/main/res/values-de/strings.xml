@@ -1,0 +1,23 @@
+<resources>
+  <string name="unscroll_service_summary">Blendet Instagrams Feed und Reels aus und sperrt Instagram während des Fokus.</string>
+  <string name="unscroll_service_description">Unscroll liest den Bildschirm nur in Instagram, Webbrowsern und den Einstellungen, die Unscroll ausschalten könnten. Damit werden Feed, Reels und Entdecken ausgeblendet und Instagram während deiner Fokuszeiten gesperrt. Bildschirminhalte werden auf deinem Handy geprüft und sofort verworfen. Nichts wird gespeichert oder gesendet.</string>
+  <string name="unscroll_overlay_locked_title">Instagram ist gesperrt</string>
+  <string name="unscroll_overlay_locked_body">Dein Fokus endet in %1$s. Unscroll hat keinen Stopp-Knopf.</string>
+  <string name="unscroll_overlay_settings_title">Während des Fokus gesperrt</string>
+  <string name="unscroll_overlay_settings_body">Diese Einstellung könnte Unscroll ausschalten und ist daher für %1$s nicht verfügbar.</string>
+  <string name="unscroll_overlay_reels_title">Reels sind ausgeblendet</string>
+  <string name="unscroll_overlay_reels_body">Deine Nachrichten sind weiterhin da.</string>
+  <string name="unscroll_overlay_feed_title">Der Feed ist ausgeblendet</string>
+  <string name="unscroll_overlay_feed_body">Nachrichten, Posten und dein Profil funktionieren weiter.</string>
+  <string name="unscroll_overlay_explore_title">Entdecken ist ausgeblendet</string>
+  <string name="unscroll_overlay_explore_body">Suche stattdessen über deine Nachrichten nach jemandem.</string>
+  <string name="unscroll_overlay_stories_title">Stories sind ausgeblendet</string>
+  <string name="unscroll_overlay_stories_body">Du hast Stories in Unscroll ausgeblendet.</string>
+  <string name="unscroll_overlay_hidden_title">Ausgeblendet</string>
+  <string name="unscroll_overlay_btn_messages">Zu den Nachrichten</string>
+  <string name="unscroll_overlay_btn_back">Zurück</string>
+  <string name="unscroll_overlay_btn_home">Zum Startbildschirm</string>
+  <string name="unscroll_dur_min">%1$d Min.</string>
+  <string name="unscroll_dur_h">%1$d Std.</string>
+  <string name="unscroll_dur_h_min">%1$d Std. %2$d Min.</string>
+</resources>

@@ -46,6 +46,10 @@ export async function serve(root) {
 }
 
 export async function launch() {
+  // @sparticuz/chromium is a Linux build; on macOS set CHROME_PATH to a local Chrome.
+  if (process.env.CHROME_PATH) {
+    return chromium.launch({ executablePath: process.env.CHROME_PATH, headless: true });
+  }
   const executablePath = await chromiumPkg.executablePath();
   return chromium.launch({
     executablePath,

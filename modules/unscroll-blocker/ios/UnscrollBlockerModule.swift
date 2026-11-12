@@ -137,6 +137,27 @@ public class UnscrollBlockerModule: Module {
   }
 }
 
+/// Picker sheet text in the user's language (keep in sync with src/i18n/locales).
+private enum PickerText {
+  static let all: [String: (title: String, cancel: String, done: String)] = [
+    "en": ("Choose Instagram", "Cancel", "Done"),
+    "hi": ("Instagram चुनें", "रद्द करें", "हो गया"),
+    "es": ("Elegir Instagram", "Cancelar", "Listo"),
+    "pt": ("Escolher Instagram", "Cancelar", "OK"),
+    "fr": ("Choisir Instagram", "Annuler", "OK"),
+    "de": ("Instagram wählen", "Abbrechen", "Fertig"),
+    "id": ("Pilih Instagram", "Batal", "Selesai"),
+  ]
+
+  static var current: (title: String, cancel: String, done: String) {
+    for tag in Locale.preferredLanguages {
+      let code = String(tag.prefix(while: { $0 != "-" && $0 != "_" })).lowercased()
+      if let t = all[code == "in" ? "id" : code] { return t }
+    }
+    return all["en"]!
+  }
+}
+
 struct PickerSheet: View {
   @State var selection: FamilyActivitySelection
   let onDone: (FamilyActivitySelection?) -> Void
@@ -144,11 +165,11 @@ struct PickerSheet: View {
   var body: some View {
     NavigationView {
       FamilyActivityPicker(selection: $selection)
-        .navigationTitle("Choose Instagram")
+        .navigationTitle(PickerText.current.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-          ToolbarItem(placement: .cancellationAction) { Button("Cancel") { onDone(nil) } }
-          ToolbarItem(placement: .confirmationAction) { Button("Done") { onDone(selection) } }
+          ToolbarItem(placement: .cancellationAction) { Button(PickerText.current.cancel) { onDone(nil) } }
+          ToolbarItem(placement: .confirmationAction) { Button(PickerText.current.done) { onDone(selection) } }
         }
     }
   }

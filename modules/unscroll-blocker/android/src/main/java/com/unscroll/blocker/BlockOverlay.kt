@@ -94,10 +94,10 @@ class BlockOverlay(private val service: AccessibilityService) {
 
     when (verdict) {
       is Verdict.BlockSurface -> {
-        root.addView(button("Go to messages", primary = true) { openInstagramInbox() })
-        root.addView(button("Go back", primary = false) { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) })
+        root.addView(button(str(R.string.unscroll_overlay_btn_messages), primary = true) { openInstagramInbox() })
+        root.addView(button(str(R.string.unscroll_overlay_btn_back), primary = false) { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) })
       }
-      else -> root.addView(button("Go to home screen", primary = true) {
+      else -> root.addView(button(str(R.string.unscroll_overlay_btn_home), primary = true) {
         hide()
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
       })
@@ -105,18 +105,32 @@ class BlockOverlay(private val service: AccessibilityService) {
     return root
   }
 
+  /** Text comes from res/values-<lang>/strings.xml, so it follows the phone's (or per-app) language. */
   private fun copyFor(v: Verdict, remainingMs: Long): Pair<String, String> {
     val left = formatRemaining(remainingMs)
     return when (v) {
-      is Verdict.BlockApp -> "Instagram is locked" to "Your focus ends in $left. Unscroll has no stop button."
-      is Verdict.BlockSettings -> "Locked during focus" to "This setting could switch Unscroll off, so it’s unavailable for $left."
+      is Verdict.BlockApp -> str(R.string.unscroll_overlay_locked_title) to str(R.string.unscroll_overlay_locked_body, left)
+      is Verdict.BlockSettings -> str(R.string.unscroll_overlay_settings_title) to str(R.string.unscroll_overlay_settings_body, left)
       is Verdict.BlockSurface -> when (v.surface) {
-        Surface.REELS -> "Reels are hidden" to "Your messages are still here."
-        Surface.FEED -> "The feed is hidden" to "Messages, posting and your profile still work."
-        Surface.EXPLORE -> "Explore is hidden" to "Search for someone from your messages instead."
-        Surface.STORIES -> "Stories are hidden" to "You chose to hide Stories in Unscroll."
+        Surface.REELS -> str(R.string.unscroll_overlay_reels_title) to str(R.string.unscroll_overlay_reels_body)
+        Surface.FEED -> str(R.string.unscroll_overlay_feed_title) to str(R.string.unscroll_overlay_feed_body)
+        Surface.EXPLORE -> str(R.string.unscroll_overlay_explore_title) to str(R.string.unscroll_overlay_explore_body)
+        Surface.STORIES -> str(R.string.unscroll_overlay_stories_title) to str(R.string.unscroll_overlay_stories_body)
       }
-      else -> "Hidden" to ""
+      else -> str(R.string.unscroll_overlay_hidden_title) to ""
+    }
+  }
+
+  private fun str(id: Int, vararg args: Any): String = service.getString(id, *args)
+
+  private fun formatRemaining(ms: Long): String {
+    val totalMin = Math.max(1L, (ms + 59_999) / 60_000)
+    val h = totalMin / 60
+    val m = totalMin % 60
+    return when {
+      h == 0L -> str(R.string.unscroll_dur_min, m)
+      m == 0L -> str(R.string.unscroll_dur_h, h)
+      else -> str(R.string.unscroll_dur_h_min, h, m)
     }
   }
 
@@ -156,16 +170,5 @@ class BlockOverlay(private val service: AccessibilityService) {
     private val ON_INK = Color.parseColor("#F3F5F9")
     private val ON_INK_MUTED = Color.parseColor("#A9B3C7")
     private val HIGHLIGHTER = Color.parseColor("#F5DD4B")
-
-    fun formatRemaining(ms: Long): String {
-      val totalMin = Math.max(1L, (ms + 59_999) / 60_000)
-      val h = totalMin / 60
-      val m = totalMin % 60
-      return when {
-        h == 0L -> "$m min"
-        m == 0L -> "$h h"
-        else -> "$h h $m min"
-      }
-    }
   }
 }

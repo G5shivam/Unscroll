@@ -73,36 +73,40 @@ export function coversSuperset(prev: Schedule, next: Schedule): boolean {
   return true;
 }
 
-export type ScheduleValidation = { ok: true; value: Schedule } | { ok: false; reason: string };
+/** `code` lets the UI show a translated message; `reason` is for logs and tests. */
+export type ScheduleInvalid = 'name' | 'days' | 'same' | 'short' | 'other';
+export type ScheduleValidation =
+  | { ok: true; value: Schedule }
+  | { ok: false; reason: string; code: ScheduleInvalid };
 
 /** Validate and normalise untrusted schedule input. */
 export function validateSchedule(input: unknown): ScheduleValidation {
-  if (typeof input !== 'object' || input === null) return { ok: false, reason: 'Not an object' };
+  if (typeof input !== 'object' || input === null) return { ok: false, reason: 'Not an object', code: 'other' };
   const o = input as Record<string, unknown>;
   const { id, name, days, startMin, endMin } = o;
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
-    return { ok: false, reason: 'Invalid id' };
+    return { ok: false, reason: 'Invalid id', code: 'other' };
   }
-  if (typeof name !== 'string') return { ok: false, reason: 'Invalid name' };
+  if (typeof name !== 'string') return { ok: false, reason: 'Invalid name', code: 'name' };
   // Strip control characters and trim; names are display-only.
   const cleanName = name.replace(/[\u0000-\u001f\u007f]/g, '').trim();
   if (cleanName.length === 0 || cleanName.length > MAX_SCHEDULE_NAME) {
-    return { ok: false, reason: `Name must be 1–${MAX_SCHEDULE_NAME} characters` };
+    return { ok: false, reason: `Name must be 1–${MAX_SCHEDULE_NAME} characters`, code: 'name' };
   }
   if (!Number.isInteger(days) || (days as number) < 1 || (days as number) > ALL_DAYS) {
-    return { ok: false, reason: 'Pick at least one day' };
+    return { ok: false, reason: 'Pick at least one day', code: 'days' };
   }
   for (const [k, v] of [
     ['startMin', startMin],
     ['endMin', endMin],
   ] as const) {
     if (!Number.isInteger(v) || (v as number) < 0 || (v as number) >= MINUTES_PER_DAY) {
-      return { ok: false, reason: `Invalid ${k}` };
+      return { ok: false, reason: `Invalid ${k}`, code: 'other' };
     }
   }
-  if (startMin === endMin) return { ok: false, reason: 'Start and end must differ' };
+  if (startMin === endMin) return { ok: false, reason: 'Start and end must differ', code: 'same' };
   const len = windowLength({ startMin: startMin as number, endMin: endMin as number });
-  if (len < 15) return { ok: false, reason: 'A schedule must be at least 15 minutes' };
+  if (len < 15) return { ok: false, reason: 'A schedule must be at least 15 minutes', code: 'short' };
   return {
     ok: true,
     value: {

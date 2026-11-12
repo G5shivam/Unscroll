@@ -1,0 +1,23 @@
+<resources>
+  <string name="unscroll_service_summary">Masque le fil et les Reels d’Instagram, et verrouille Instagram pendant la concentration.</string>
+  <string name="unscroll_service_description">Unscroll lit l’écran uniquement dans Instagram, les navigateurs et les réglages qui pourraient désactiver Unscroll. Il s’en sert pour masquer le fil, les Reels et Explorer, et pour verrouiller Instagram pendant vos heures de concentration. Le contenu de l’écran est vérifié sur votre téléphone puis effacé aussitôt. Rien n’est enregistré ni envoyé.</string>
+  <string name="unscroll_overlay_locked_title">Instagram est verrouillé</string>
+  <string name="unscroll_overlay_locked_body">Votre session se termine dans %1$s. Unscroll n’a pas de bouton stop.</string>
+  <string name="unscroll_overlay_settings_title">Verrouillé pendant la concentration</string>
+  <string name="unscroll_overlay_settings_body">Ce réglage pourrait désactiver Unscroll, il est donc indisponible pendant %1$s.</string>
+  <string name="unscroll_overlay_reels_title">Les Reels sont masqués</string>
+  <string name="unscroll_overlay_reels_body">Vos messages sont toujours là.</string>
+  <string name="unscroll_overlay_feed_title">Le fil est masqué</string>
+  <string name="unscroll_overlay_feed_body">Les messages, les publications et votre profil fonctionnent toujours.</string>
+  <string name="unscroll_overlay_explore_title">Explorer est masqué</string>
+  <string name="unscroll_overlay_explore_body">Cherchez plutôt quelqu’un depuis vos messages.</string>
+  <string name="unscroll_overlay_stories_title">Les stories sont masquées</string>
+  <string name="unscroll_overlay_stories_body">Vous avez choisi de masquer les stories dans Unscroll.</string>
+  <string name="unscroll_overlay_hidden_title">Masqué</string>
+  <string name="unscroll_overlay_btn_messages">Aller aux messages</string>
+  <string name="unscroll_overlay_btn_back">Retour</string>
+  <string name="unscroll_overlay_btn_home">Aller à l’écran d’accueil</string>
+  <string name="unscroll_dur_min">%1$d min</string>
+  <string name="unscroll_dur_h">%1$d h</string>
+  <string name="unscroll_dur_h_min">%1$d h %2$d min</string>
+</resources>

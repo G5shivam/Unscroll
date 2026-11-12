@@ -11,6 +11,7 @@ import {
   isAllowedNavigation,
   parsePageMessage,
 } from '../inject/config';
+import { t } from '../i18n';
 import { useController, useUnscroll } from '../state/provider';
 import { LockPanel } from '../ui/LockPanel';
 import { Icon, Notice, Screen } from '../ui/primitives';
@@ -35,11 +36,11 @@ export default function CleanInstagram() {
       <Screen title="Instagram" edges={['top', 'bottom']}>
         <Notice
           icon="info"
-          title="Use the Instagram app"
-          body="On Android, Unscroll blocks the feed and Reels inside the official Instagram app, so you don’t need this view."
+          title={t('ig_android_title')}
+          body={t('ig_android_body')}
         />
         <Pressable onPress={() => router.back()} style={{ marginTop: space.xl }} accessibilityRole="button">
-          <Text variant="bodyStrong">Close</Text>
+          <Text variant="bodyStrong">{t('close')}</Text>
         </Pressable>
       </Screen>
     );
@@ -59,13 +60,13 @@ export default function CleanInstagram() {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <View style={styles.bar}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close Instagram" hitSlop={12}>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('close_ig')} hitSlop={12}>
           <Icon name="x" size={22} />
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text variant="bodyStrong">Instagram</Text>
           <Text variant="caption" tone="slate">
-            Feed and Reels hidden
+            {t('ig_hidden')}
           </Text>
         </View>
         <View style={{ width: 22 }} />

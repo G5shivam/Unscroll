@@ -2,14 +2,22 @@ import { router } from 'expo-router';
 import { Platform, View } from 'react-native';
 import { DAY } from '../../core/constants';
 import { realEnv } from '../../core/env';
+import { freshStart, weekInsight } from '../../core/insights';
 import { nextStart } from '../../core/next';
+import { templateByKey, type ScheduleTemplate } from '../../core/templates';
 import { useController, useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
-import { formatClock, formatDuration } from '../../ui/format';
+import { t, tn } from '../../i18n';
+import { templateName, templateWhy } from '../../ui/copy';
+import { formatClock, formatDate, formatRange } from '../../ui/format';
 import { LockPanel } from '../../ui/LockPanel';
 import { Group, Icon, Notice, Row, Screen } from '../../ui/primitives';
 import { Text } from '../../ui/Text';
 import { color, space } from '../../ui/theme';
+import { WeekCard } from '../../ui/WeekCard';
+
+/** Sleep first: late-night scrolling is where the feed costs the most. */
+const SUGGESTED = (['sleep', 'study'] as const).map((k) => templateByKey(k)).filter(Boolean) as ScheduleTemplate[];
 
 export default function Today() {
   const { state, now, focus, status } = useUnscroll();
@@ -19,33 +27,29 @@ export default function Today() {
 
   const today = realEnv.dayKey(now);
   const blockedToday = state.stats.blocks[today] ?? 0;
-  let weekMinutes = 0;
-  for (let i = 0; i < 7; i++) weekMinutes += state.stats.focusMinutes[realEnv.dayKey(now - i * DAY)] ?? 0;
+  const week = weekInsight(state.stats, now, realEnv.dayKey);
+  const fresh = freshStart(state.escapes, state.streak, now);
 
-  const dateLine = new Date(now).toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const dateLine = formatDate(now, { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
-    <Screen title="Today" subtitle={dateLine} testID="screen-today">
+    <Screen title={t('today_title')} subtitle={dateLine} testID="screen-today">
       {blockerOff ? (
         <View style={{ marginBottom: space.xl }}>
           <Notice
             tone="alert"
             icon="alert-triangle"
-            title="Blocking is off"
+            title={t('blocker_off_title')}
             body={
               Platform.OS === 'ios'
-                ? 'Screen Time access was turned off, so Instagram is not locked.'
-                : 'Unscroll was switched off in Accessibility, so Instagram is not blocked.'
+                ? t('blocker_off_ios')
+                : t('blocker_off_android')
             }
             testID="blocker-off"
             action={
               <Button
                 kind="secondary"
-                label="Turn it back on"
+                label={t('turn_back_on')}
                 onPress={() => void ctrl.requestPermission()}
                 style={{ marginTop: space.md, alignSelf: 'flex-start', minHeight: 40 }}
               />
@@ -60,64 +64,81 @@ export default function Today() {
         {focus.active ? (
           <Button
             kind="secondary"
-            label="Extend focus"
+            label={t('extend_focus')}
             onPress={() => router.push('/focus')}
             testID="extend-focus"
           />
         ) : (
-          <Button label="Start focus" onPress={() => router.push('/focus')} testID="start-focus" />
+          <Button label={t('start_focus')} onPress={() => router.push('/focus')} testID="start-focus" />
         )}
         {Platform.OS === 'ios' ? (
           <Button
             kind="secondary"
-            label="Open Instagram"
+            label={t('open_instagram')}
             onPress={() => router.push('/instagram')}
             testID="open-clean-instagram"
-            accessibilityHint="Opens Instagram inside Unscroll with the feed and Reels removed"
+            accessibilityHint={t('open_instagram_hint')}
           />
         ) : null}
       </View>
 
-      <Group label="Next lock">
-        {next ? (
+      {fresh ? (
+        <View style={{ marginBottom: space.xl }}>
+          <Notice
+            tone="calm"
+            icon="sunrise"
+            title={t('fresh_title')}
+            body={
+              fresh.best > 0 ? tn('fresh_body_best', fresh.best) : t('fresh_body')
+            }
+            testID="fresh-start"
+          />
+        </View>
+      ) : null}
+
+      {next ? (
+        <Group label={t('next_lock')}>
           <Row
             icon="clock"
             title={next.schedule.name}
-            detail={`${relativeDay(next.startsAt, now)} at ${formatClock(next.startsAt)}`}
+            detail={t('next_at', { day: relativeDay(next.startsAt, now), time: formatClock(next.startsAt) })}
             onPress={() => router.push(`/schedule/${next.schedule.id}`)}
             testID="next-lock"
           />
-        ) : (
-          <Row
-            icon="plus"
-            title="Add your study or work hours"
-            detail="Instagram will lock on its own at those times."
-            onPress={() => router.push('/schedule/new')}
-            testID="add-first-schedule"
-          />
-        )}
+        </Group>
+      ) : (
+        <Group label={t('suggested')} note={t('suggested_note')}>
+          {SUGGESTED.map((tpl) => (
+            <Row
+              key={tpl.key}
+              icon={tpl.key === 'sleep' ? 'moon' : 'book-open'}
+              title={templateName(tpl.key)}
+              detail={`${formatRange(tpl.startMin, tpl.endMin)} · ${templateWhy(tpl.key)}`}
+              onPress={() => router.push(`/schedule/new?template=${tpl.key}`)}
+              testID={tpl.key === 'study' ? 'add-first-schedule' : `suggest-${tpl.key}`}
+            />
+          ))}
+        </Group>
+      )}
+
+      <Group label={t('this_week')}>
+        <WeekCard week={week} />
       </Group>
 
-      <Group label="Progress">
+      <Group label={t('today_group')}>
         <Row
           icon="shield"
-          title="Feed and Reels stopped"
-          right={<Value testID="stat-blocked">{blockedToday === 1 ? '1 time' : `${blockedToday} times`}</Value>}
-          detail="Today"
-        />
-        <Row
-          icon="target"
-          title="Focus time"
-          detail="Last 7 days"
-          right={<Value testID="stat-focus">{weekMinutes > 0 ? formatDuration(weekMinutes * 60_000) : '—'}</Value>}
+          title={t('stat_blocked_title')}
+          right={<Value testID="stat-blocked">{tn('times', blockedToday)}</Value>}
+          detail={t('stat_blocked_detail')}
         />
         <Row
           icon="award"
-          title="Streak"
-          detail={state.streak.best > 0 ? `Best ${state.streak.best} days` : 'Finish a focus to start one'}
+          title={t('streak')}
+          detail={state.streak.best > 0 ? tn('streak_best', state.streak.best) : t('streak_none')}
           right={
             <Value testID="stat-streak">
-              {state.streak.current === 1 ? '1 day' : `${state.streak.current} days`}
+              {tn('days', state.streak.current)}
             </Value>
           }
         />
@@ -126,7 +147,7 @@ export default function Today() {
         <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
           <Icon name="info" size={14} tint={color.slate} />
           <Text variant="caption" tone="slate" style={{ flex: 1 }}>
-            Schedules and settings that loosen the lock wait until this focus ends.
+            {t('focus_active_note')}
           </Text>
         </View>
       ) : null}
@@ -144,7 +165,7 @@ function Value({ children, testID }: { children: string; testID?: string }) {
 
 function relativeDay(at: number, now: number): string {
   const a = realEnv.dayKey(at);
-  if (a === realEnv.dayKey(now)) return 'Today';
-  if (a === realEnv.dayKey(now + DAY)) return 'Tomorrow';
-  return new Date(at).toLocaleDateString('en-IN', { weekday: 'long' });
+  if (a === realEnv.dayKey(now)) return t('day_today');
+  if (a === realEnv.dayKey(now + DAY)) return t('day_tomorrow');
+  return formatDate(at, { weekday: 'long' });
 }

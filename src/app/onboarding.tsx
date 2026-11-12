@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import type { Surface, SurfaceSettings } from '../core/types';
+import { SURFACES, type SurfaceSettings } from '../core/types';
+import { t } from '../i18n';
 import { useController, useUnscroll } from '../state/provider';
 import { Button } from '../ui/Button';
+import { surfaceDetail, surfaceName } from '../ui/copy';
 import { Group, Icon, Notice, Row, Screen, Toggle, type IconName } from '../ui/primitives';
 import { Text } from '../ui/Text';
 import { color, radius, space } from '../ui/theme';
@@ -26,7 +28,7 @@ export default function Onboarding() {
 function StepCaption({ n }: { n: number }) {
   return (
     <Text variant="label" tone="slate" style={{ marginBottom: space.sm }}>
-      Step {n} of {STEPS}
+      {t('step', { n, total: STEPS })}
     </Text>
   );
 }
@@ -36,7 +38,7 @@ function Welcome({ onNext }: { onNext: () => void }) {
     <Screen
       testID="onboarding-welcome"
       edges={['top', 'bottom']}
-      footer={<Button label="Get started" onPress={onNext} testID="get-started" />}
+      footer={<Button label={t('get_started')} onPress={onNext} testID="get-started" />}
     >
       <View style={{ paddingTop: space.xxxl }}>
         <View style={styles.mark}>
@@ -46,28 +48,27 @@ function Welcome({ onNext }: { onNext: () => void }) {
           </Text>
         </View>
         <Text variant="title" style={{ marginTop: space.xl }}>
-          Keep your messages.{'\n'}Lose the scroll.
+          {t('tagline')}
         </Text>
         <Text tone="slate" style={{ marginTop: space.md, maxWidth: 360 }}>
-          Unscroll hides Instagram’s feed and Reels, and locks the whole app during the hours you choose to
-          focus.
+          {t('welcome_body')}
         </Text>
       </View>
       <View style={{ marginTop: space.xxl, gap: space.xl }}>
         <Rule
           icon="eye-off"
-          title="Feed and Reels stay hidden"
-          body="DMs, posting and your profile keep working."
+          title={t('rule1_title')}
+          body={t('rule1_body')}
         />
         <Rule
           icon="lock"
-          title="A focus lock can’t be cancelled"
-          body="Once it starts, it runs to the end. There is no pause button."
+          title={t('rule2_title')}
+          body={t('rule2_body')}
         />
         <Rule
           icon="log-out"
-          title="Leaving takes a deliberate step"
-          body="No stop button. Only switching Unscroll off in your phone’s settings, or uninstalling it, ends a lock, and that resets your streak."
+          title={t('rule3_title')}
+          body={t('rule3_body')}
         />
       </View>
     </Screen>
@@ -102,29 +103,29 @@ function Disclosure({ onNext }: { onNext: () => void }) {
       testID="onboarding-disclosure"
       edges={['top', 'bottom']}
       footer={
-        <Button label="Agree and continue" onPress={accept} disabled={!agreed} testID="agree-continue" />
+        <Button label={t('agree_continue')} onPress={accept} disabled={!agreed} testID="agree-continue" />
       }
     >
       <View style={{ paddingTop: space.xl }}>
         <StepCaption n={1} />
         <Text variant="title" accessibilityRole="header">
-          What Unscroll can see
+          {t('disclosure_title')}
         </Text>
         <Text tone="slate" style={{ marginTop: space.md }}>
           {IOS
-            ? 'Unscroll uses Apple’s Screen Time to lock the Instagram app. You’ll use Instagram inside Unscroll instead, where the feed and Reels are removed. Apple does not let any app see your activity or messages.'
-            : 'To find the feed and Reels inside Instagram, Unscroll uses Android’s Accessibility service. It reads the screen only in Instagram, your web browsers, and the Settings pages that could switch Unscroll off.'}
+            ? t('disclosure_ios')
+            : t('disclosure_android')}
         </Text>
       </View>
       <View style={{ marginTop: space.xl }}>
         <Group>
-          <Row icon="smartphone" title="Nothing leaves this phone" detail="Unscroll has no account and no server." />
+          <Row icon="smartphone" title={t('nothing_leaves')} detail={t('d_no_server')} />
           <Row
             icon="message-circle"
-            title="Messages and posts are never stored"
-            detail="Screen content is checked and immediately discarded."
+            title={t('d_never_stored')}
+            detail={t('d_discarded')}
           />
-          <Row icon="bar-chart-2" title="Only counts are kept" detail="Blocked attempts and focus minutes, by day." />
+          <Row icon="bar-chart-2" title={t('d_counts')} detail={t('d_counts_detail')} />
         </Group>
       </View>
       <Pressable
@@ -132,14 +133,14 @@ function Disclosure({ onNext }: { onNext: () => void }) {
         accessibilityRole="checkbox"
         accessibilityState={{ checked: agreed }}
         aria-checked={agreed}
-        accessibilityLabel="I understand how Unscroll uses this permission"
+        accessibilityLabel={t('consent')}
         onPress={() => setAgreed((v) => !v)}
         style={styles.consent}
       >
         <View style={[styles.box, agreed && styles.boxOn]}>
           {agreed ? <Icon name="check" size={16} tint={color.onInk} /> : null}
         </View>
-        <Text style={{ flex: 1 }}>I understand how Unscroll uses this permission.</Text>
+        <Text style={{ flex: 1 }}>{t('consent')}</Text>
       </Pressable>
     </Screen>
   );
@@ -157,25 +158,25 @@ function Permissions({ onNext }: { onNext: () => void }) {
     <Screen
       testID="onboarding-permissions"
       edges={['top', 'bottom']}
-      footer={<Button label="Continue" onPress={onNext} disabled={!ready} testID="permissions-continue" />}
+      footer={<Button label={t('continue')} onPress={onNext} disabled={!ready} testID="permissions-continue" />}
     >
       <View style={{ paddingTop: space.xl }}>
         <StepCaption n={2} />
         <Text variant="title" accessibilityRole="header">
-          {IOS ? 'Connect Screen Time' : 'Turn on blocking'}
+          {IOS ? t('perm_title_ios') : t('perm_title_android')}
         </Text>
         <Text tone="slate" style={{ marginTop: space.md }}>
           {IOS
-            ? 'Allow access, then pick Instagram in Apple’s list. Unscroll keeps the Instagram app locked and gives you a clean version inside Unscroll.'
-            : 'Android opens its Accessibility settings. Tap Unscroll, switch it on, then come back here.'}
+            ? t('perm_body_ios')
+            : t('perm_body_android')}
         </Text>
       </View>
       <View style={{ marginTop: space.xl }}>
         <Group>
           <Row
             icon="shield"
-            title={IOS ? 'Screen Time access' : 'Unscroll in Accessibility'}
-            detail={authorized ? 'On' : 'Off'}
+            title={IOS ? t('screen_time_access') : t('perm_row_android')}
+            detail={authorized ? t('on') : t('off')}
             testID="perm-row"
             right={
               authorized ? (
@@ -183,7 +184,7 @@ function Permissions({ onNext }: { onNext: () => void }) {
               ) : (
                 <Button
                   kind="secondary"
-                  label={IOS ? 'Allow' : 'Open settings'}
+                  label={IOS ? t('allow') : t('open_settings')}
                   onPress={() => void ctrl.requestPermission()}
                   testID="perm-open"
                   style={{ minHeight: 40, paddingHorizontal: space.lg }}
@@ -194,12 +195,12 @@ function Permissions({ onNext }: { onNext: () => void }) {
           {IOS ? (
             <Row
               icon="instagram"
-              title="Choose Instagram"
-              detail={picked > 0 || (status?.selectedCount ?? 0) > 0 ? 'Selected' : 'Not chosen yet'}
+              title={t('choose_ig')}
+              detail={picked > 0 || (status?.selectedCount ?? 0) > 0 ? t('selected') : t('not_chosen')}
               right={
                 <Button
                   kind="secondary"
-                  label="Choose"
+                  label={t('choose')}
                   disabled={!authorized}
                   onPress={async () => setPicked(await ctrl.pickApps())}
                   style={{ minHeight: 40, paddingHorizontal: space.lg }}
@@ -209,8 +210,8 @@ function Permissions({ onNext }: { onNext: () => void }) {
           ) : (
             <Row
               icon="battery-charging"
-              title="Keep running in the background"
-              detail="Recommended on Xiaomi, Vivo, Oppo, Realme and Samsung"
+              title={t('keep_bg')}
+              detail={t('keep_bg_detail')}
               onPress={() => void ctrl.openBatterySettings()}
               testID="battery-row"
             />
@@ -220,20 +221,14 @@ function Permissions({ onNext }: { onNext: () => void }) {
       {!IOS ? (
         <Notice
           icon="info"
-          title="Why Android asks about this"
-          body="Accessibility is the only way an app can tell the feed apart from your messages. Unscroll does not use it for anything else."
+          title={t('why_android_title')}
+          body={t('why_android_body')}
         />
       ) : null}
     </Screen>
   );
 }
 
-const SURFACE_COPY: { key: Surface; title: string; detail: string }[] = [
-  { key: 'feed', title: 'Home feed', detail: 'Posts and suggestions on the first tab' },
-  { key: 'reels', title: 'Reels', detail: 'The Reels tab, and Reels opened from links' },
-  { key: 'explore', title: 'Explore', detail: 'The search grid of suggested posts' },
-  { key: 'stories', title: 'Stories', detail: 'Off by default. Turn on if they pull you in' },
-];
 
 function Defaults() {
   const ctrl = useController();
@@ -250,20 +245,20 @@ function Defaults() {
     <Screen
       testID="onboarding-defaults"
       edges={['top', 'bottom']}
-      footer={<Button label="Finish setup" onPress={finish} busy={busy} testID="finish-setup" />}
+      footer={<Button label={t('finish_setup')} onPress={finish} busy={busy} testID="finish-setup" />}
     >
       <View style={{ paddingTop: space.xl }}>
         <StepCaption n={3} />
         <Text variant="title" accessibilityRole="header">
-          What should disappear?
+          {t('defaults_title')}
         </Text>
         <Text tone="slate" style={{ marginTop: space.md }}>
-          These stay hidden all the time, not only during focus.
+          {t('defaults_body')}
         </Text>
       </View>
       <View style={{ marginTop: space.xl }}>
-        <Group note="You can hide more at any time. Showing something again takes 24 hours.">
-          {SURFACE_COPY.map((s) => (
+        <Group note={t('defaults_note')}>
+          {SURFACES.map((key) => ({ key, title: surfaceName(key), detail: surfaceDetail(key) })).map((s) => (
             <Row
               key={s.key}
               title={s.title}
@@ -271,7 +266,7 @@ function Defaults() {
               right={
                 <Toggle
                   testID={`default-${s.key}`}
-                  label={`Hide ${s.title}`}
+                  label={t('hide_x', { name: s.title })}
                   value={surfaces[s.key]}
                   onChange={(v) => setSurfaces((cur) => ({ ...cur, [s.key]: v }))}
                 />

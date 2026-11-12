@@ -61,6 +61,24 @@ shared-test-vectors/ JSON cases run by BOTH the TypeScript and Kotlin tests
 e2e/                 Browser E2E + injected-script tests; e2e/maestro = on-device flows
 ```
 
+## Languages
+
+Unscroll follows the phone's language (and Android 13+ / iOS per-app language):
+English, Hindi, Spanish, Portuguese (Brazil), French, German and Indonesian.
+Anything else falls back to English. Times follow the phone's 12/24-hour setting.
+
+| Where | Files |
+| --- | --- |
+| App screens | `src/i18n/locales/<lang>.ts` (`en.ts` is the source; TypeScript requires every key) |
+| Android block screen and Accessibility description | `modules/unscroll-blocker/android/src/main/res/values-<lang>/strings.xml` (Indonesian is `values-in`) |
+| iOS Screen Time shield and app picker | dictionaries in `targets/shield-config/ShieldConfigurationExtension.swift` and `modules/unscroll-blocker/ios/UnscrollBlockerModule.swift` |
+| Instagram's own tab labels (Android detection fallback) | `DetectionRules.DEFAULT` in `ScreenClassifier.kt` |
+
+To add a language: copy `en.ts`, translate it, register it in `src/i18n/index.ts`,
+add it to `supportedLocales` in `app.json`, and add the Android and iOS strings above.
+`tests/i18n.test.tsx` checks every catalog has all keys and the same `{placeholders}`.
+Have a native speaker review translations before release.
+
 ## Tests
 
 ```bash

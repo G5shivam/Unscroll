@@ -62,6 +62,31 @@
             "deploymentTarget": "16.4"
           }
         }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "hi",
+              "es",
+              "pt",
+              "fr",
+              "de",
+              "id"
+            ],
+            "android": [
+              "en",
+              "hi",
+              "es",
+              "pt",
+              "fr",
+              "de",
+              "id"
+            ]
+          }
+        }
       ]
     ],
     "extra": {

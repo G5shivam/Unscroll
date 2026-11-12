@@ -15,3 +15,8 @@ jest.mock('@expo/vector-icons/Feather', () => {
   const Icon = ({ name }) => React.createElement(Text, { testID: `icon-${name}` }, name);
   return { __esModule: true, default: Icon };
 });
+// Tests run in English (India) with a 12-hour clock unless a test calls setLocale().
+jest.mock('expo-localization', () => ({
+  getLocales: () => [{ languageTag: 'en-IN', languageCode: 'en', textDirection: 'ltr', regionCode: 'IN' }],
+  getCalendars: () => [{ calendar: 'gregory', timeZone: null, uses24hourClock: false, firstWeekday: 1 }],
+}));

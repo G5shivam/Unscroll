@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { HOUR, MAX_SESSION_MS, MIN_SESSION_MS, MINUTE } from '../core/constants';
+import { t } from '../i18n';
 import { useController, useUnscroll } from '../state/provider';
 import { formatClock, formatDuration } from '../ui/format';
 import { HoldButton } from '../ui/HoldButton';
@@ -26,22 +27,22 @@ export default function StartFocus() {
     setError(null);
     const r = await ctrl.startFocus(duration);
     if (r.ok) router.back();
-    else if (r.error === 'would-shorten') setError('A lock can only be made longer, not shorter.');
-    else if (r.error === 'enforcer-refused') setError('Blocking is off. Turn it on in Settings, then try again.');
-    else setError('Pick between 15 minutes and 12 hours.');
+    else if (r.error === 'would-shorten') setError(t('err_shorten'));
+    else if (r.error === 'enforcer-refused') setError(t('err_blocker_off'));
+    else setError(t('err_range'));
   };
 
   return (
     <Screen
       edges={['top', 'bottom']}
       testID="screen-focus"
-      footer={<HoldButton label="Hold to lock" onComplete={lock} disabled={!valid} testID="hold-to-lock" />}
+      footer={<HoldButton label={t('hold_to_lock')} onComplete={lock} disabled={!valid} testID="hold-to-lock" />}
     >
       <View style={styles.top}>
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('close')}
           hitSlop={12}
           testID="close-focus"
         >
@@ -49,12 +50,12 @@ export default function StartFocus() {
         </Pressable>
       </View>
       <Text variant="title" accessibilityRole="header">
-        {extending ? 'Extend this focus' : 'Start a focus'}
+        {extending ? t('focus_extend_title') : t('focus_start_title')}
       </Text>
       <Text tone="slate" style={{ marginTop: space.xs }}>
         {extending
-          ? `${formatDuration(remaining)} left. You can add time, but not take it away.`
-          : 'Instagram locks completely until the timer ends.'}
+          ? t('focus_extend_body', { d: formatDuration(remaining) })
+          : t('focus_start_body')}
       </Text>
 
       <View style={styles.chips}>
@@ -72,7 +73,7 @@ export default function StartFocus() {
       <View style={styles.stepper}>
         <StepButton
           icon="minus"
-          label="15 minutes less"
+          label={t('less_15')}
           disabled={duration - STEP < minimum}
           onPress={() => setDuration((d) => Math.max(minimum, d - STEP))}
           testID="duration-minus"
@@ -82,12 +83,12 @@ export default function StartFocus() {
             {formatDuration(duration)}
           </Text>
           <Text tone="slate" variant="caption" testID="ends-at">
-            {now ? `Ends at ${formatClock(now + duration)}` : ' '}
+            {now ? t('ends_at', { time: formatClock(now + duration) }) : ' '}
           </Text>
         </View>
         <StepButton
           icon="plus"
-          label="15 minutes more"
+          label={t('more_15')}
           disabled={duration + STEP > MAX_SESSION_MS}
           onPress={() => setDuration((d) => Math.min(MAX_SESSION_MS, d + STEP))}
           testID="duration-plus"
@@ -97,8 +98,8 @@ export default function StartFocus() {
       <Notice
         tone="pending"
         icon="alert-circle"
-        title="You won’t be able to stop this"
-        body="Unscroll has no stop button. Switching Unscroll off in your phone’s settings, or uninstalling it, ends the lock and resets your streak."
+        title={t('cant_stop_title')}
+        body={t('cant_stop_body')}
       />
       {error ? (
         <View style={{ marginTop: space.md }}>

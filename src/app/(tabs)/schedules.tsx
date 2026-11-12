@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import { realEnv } from '../../core/env';
 import { minutesUntilEnd } from '../../core/schedule';
+import { t } from '../../i18n';
 import { useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
 import { formatDays, formatRange, formatUntil } from '../../ui/format';
@@ -15,13 +16,13 @@ export default function Schedules() {
   const { schedules } = state.policy;
 
   return (
-    <Screen title="Schedules" subtitle="Recurring focus hours. Instagram locks on its own." testID="screen-schedules">
+    <Screen title={t('schedules_title')} subtitle={t('schedules_subtitle')} testID="screen-schedules">
       {schedules.length === 0 ? (
         <View style={{ marginBottom: space.xl }}>
           <Notice
             icon="calendar"
-            title="No schedules yet"
-            body="Add the hours you study or work, and Unscroll will lock Instagram during them every week."
+            title={t('no_schedules_title')}
+            body={t('no_schedules_body')}
           />
         </View>
       ) : (
@@ -36,7 +37,9 @@ export default function Schedules() {
                 title={s.name}
                 detail={
                   pending
-                    ? `${pending.kind === 'schedule-delete' ? 'Removal' : 'Change'} takes effect ${formatUntil(pending.effectiveAt, now)}`
+                    ? t(pending.kind === 'schedule-delete' ? 'removal_takes' : 'change_takes', {
+                        when: formatUntil(pending.effectiveAt, now),
+                      })
                     : `${formatDays(s.days)}, ${formatRange(s.startMin, s.endMin)}`
                 }
                 onPress={() => router.push(`/schedule/${s.id}`)}
@@ -45,7 +48,7 @@ export default function Schedules() {
                     <View style={badge}>
                       <Icon name="lock" size={12} tint={color.ink} />
                       <Text variant="caption" style={{ color: color.ink }}>
-                        Running
+                        {t('running')}
                       </Text>
                     </View>
                   ) : undefined
@@ -55,7 +58,7 @@ export default function Schedules() {
           })}
         </Group>
       )}
-      <Button label="New schedule" kind={schedules.length ? 'secondary' : 'primary'} onPress={() => router.push('/schedule/new')} testID="new-schedule" />
+      <Button label={t('new_schedule')} kind={schedules.length ? 'secondary' : 'primary'} onPress={() => router.push('/schedule/new')} testID="new-schedule" />
     </Screen>
   );
 }

@@ -25,6 +25,14 @@ data class DetectionRules(
   val neverBlock: Set<String>,
   val reelsViewIds: Set<String>,
   val storiesViewIds: Set<String>,
+  /**
+   * Bottom-tab view ids. These don't change with Instagram's display language,
+   * so they are checked first; the labels below are a fallback for app
+   * versions that rename the ids.
+   */
+  val homeTabViewIds: Set<String>,
+  val exploreTabViewIds: Set<String>,
+  val reelsTabViewIds: Set<String>,
   val homeTabLabels: Set<String>,
   val exploreTabLabels: Set<String>,
   val reelsTabLabels: Set<String>,
@@ -72,9 +80,23 @@ data class DetectionRules(
       ),
       reelsViewIds = setOf("clips_viewer_view_pager", "clips_video_container", "clips_viewer_container"),
       storiesViewIds = setOf("reel_viewer_root", "reel_viewer_container", "reel_viewer_media_container"),
-      homeTabLabels = setOf("home", "होम"),
-      exploreTabLabels = setOf("search and explore", "explore", "खोजें और एक्सप्लोर करें"),
-      reelsTabLabels = setOf("reels", "रील्स"),
+      homeTabViewIds = setOf("feed_tab"),
+      exploreTabViewIds = setOf("search_tab"),
+      reelsTabViewIds = setOf("clips_tab"),
+      // Instagram's own tab labels in common languages (lower-cased). VERIFY ON DEVICE per language.
+      homeTabLabels = setOf(
+        "home", "होम", "inicio", "página inicial", "início", "accueil", "startseite", "beranda",
+        "anasayfa", "ana sayfa", "главная", "home page", "ホーム", "홈", "首页", "trang chủ", "หน้าหลัก",
+        "الرئيسية", "হোম", "முகப்பு", "హోమ్", "होम पेज",
+      ),
+      exploreTabLabels = setOf(
+        "search and explore", "explore", "खोजें और एक्सप्लोर करें", "buscar y explorar", "explorar",
+        "pesquisar e explorar", "pesquisa e explorar", "rechercher et explorer", "explorer",
+        "suchen und entdecken", "entdecken", "cari dan jelajahi", "jelajahi", "ara ve keşfet", "keşfet",
+        "поиск и интересное", "интересное", "検索と発見", "검색 및 탐색", "搜索和探索", "tìm kiếm và khám phá",
+        "ค้นหาและสำรวจ", "البحث والاستكشاف", "খুঁজুন ও এক্সপ্লোর করুন",
+      ),
+      reelsTabLabels = setOf("reels", "रील्स", "réels", "リール", "릴스", "快拍", "রিলস", "ريلز", "рилс"),
       appLabel = "unscroll",
       forceStopLabels = setOf("force stop", "बलपूर्वक रोकें", "clear storage", "clear data", "clear cache"),
       accessibilityLabels = setOf("use unscroll", "unscroll shortcut", "accessibility", "सुलभता"),
@@ -118,15 +140,17 @@ object ScreenClassifier {
     fun label(n: NodeSignal) = (n.desc ?: n.text)?.trim()?.lowercase()
     if (policy.blocks(Surface.REELS)) {
       if (nodes.any { it.idName in r.reelsViewIds }) return Verdict.BlockSurface(Surface.REELS)
-      if (nodes.any { it.selected && label(it) in r.reelsTabLabels }) return Verdict.BlockSurface(Surface.REELS)
+      if (nodes.any { it.selected && (it.idName in r.reelsTabViewIds || label(it) in r.reelsTabLabels) }) {
+        return Verdict.BlockSurface(Surface.REELS)
+      }
     }
     if (policy.blocks(Surface.STORIES) && nodes.any { it.idName in r.storiesViewIds }) {
       return Verdict.BlockSurface(Surface.STORIES)
     }
-    if (policy.blocks(Surface.EXPLORE) && nodes.any { it.selected && label(it) in r.exploreTabLabels }) {
+    if (policy.blocks(Surface.EXPLORE) && nodes.any { it.selected && (it.idName in r.exploreTabViewIds || label(it) in r.exploreTabLabels) }) {
       return Verdict.BlockSurface(Surface.EXPLORE)
     }
-    if (policy.blocks(Surface.FEED) && nodes.any { it.selected && label(it) in r.homeTabLabels }) {
+    if (policy.blocks(Surface.FEED) && nodes.any { it.selected && (it.idName in r.homeTabViewIds || label(it) in r.homeTabLabels) }) {
       return Verdict.BlockSurface(Surface.FEED)
     }
     return Verdict.Allow

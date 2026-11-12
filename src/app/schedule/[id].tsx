@@ -1,13 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { ALL_DAYS, MAX_SCHEDULE_NAME, MINUTES_PER_DAY, WEEKDAYS } from '../../core/constants';
+import { ALL_DAYS, MAX_SCHEDULES, MAX_SCHEDULE_NAME, MINUTES_PER_DAY, WEEKDAYS } from '../../core/constants';
+import { scheduleFromTemplate, templateByKey, TEMPLATES } from '../../core/templates';
 import { newId, realEnv } from '../../core/env';
 import { minutesUntilEnd, validateSchedule, windowLength } from '../../core/schedule';
 import type { Schedule } from '../../core/types';
 import { useController, useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
-import { DAY_LETTERS, DAY_NAMES, formatDuration, formatMinuteOfDay, formatUntil } from '../../ui/format';
+import { t } from '../../i18n';
+import { templateName, templateWhy, validationText } from '../../ui/copy';
+import { dayLetters, dayNames, formatDuration, formatMinuteOfDay, formatUntil } from '../../ui/format';
 import { Chip, Icon, Notice, Screen } from '../../ui/primitives';
 import { Text } from '../../ui/Text';
 import { color, font, radius, space } from '../../ui/theme';
@@ -15,13 +18,17 @@ import { color, font, radius, space } from '../../ui/theme';
 const STEP = 15;
 
 export default function ScheduleEditor() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, template } = useLocalSearchParams<{ id: string; template?: string }>();
   const { state, now } = useUnscroll();
   const ctrl = useController();
   const existing = state.policy.schedules.find((s) => s.id === id);
   const isNew = id === 'new' || !existing;
   const initial: Schedule = useMemo(
-    () => existing ?? { id: newId(), name: 'Study block', days: WEEKDAYS, startMin: 9 * 60, endMin: 13 * 60 },
+    () => {
+      if (existing) return existing;
+      const tpl = templateByKey(template) ?? TEMPLATES[2];
+      return scheduleFromTemplate(tpl, newId(), templateName(tpl.key));
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [id],
   );
@@ -35,17 +42,17 @@ export default function ScheduleEditor() {
 
   const save = async () => {
     setError(null);
-    if (!validation.ok) return setError(validation.reason);
+    if (!validation.ok) return setError(validationText(validation.code));
     setBusy(true);
     const r = isNew ? await ctrl.addSchedule(draft) : await ctrl.updateSchedule(draft);
     setBusy(false);
     if (!r.ok) {
       setError(
         r.error === 'locked'
-          ? 'This schedule is running. You can loosen it after it ends.'
+          ? t('err_running_loosen')
           : r.error === 'too-many'
-            ? 'You can have up to 20 schedules.'
-            : 'Check the days and times, then try again.',
+            ? t('err_too_many', { n: MAX_SCHEDULES })
+            : t('err_check'),
       );
       return;
     }
@@ -57,7 +64,7 @@ export default function ScheduleEditor() {
     setBusy(true);
     const r = await ctrl.deleteSchedule(existing.id);
     setBusy(false);
-    if (!r.ok) setError(r.error === 'locked' ? 'This schedule is running. Remove it after it ends.' : 'Could not remove it.');
+    if (!r.ok) setError(r.error === 'locked' ? t('err_running_remove') : t('err_remove'));
     else router.back();
   };
 
@@ -70,7 +77,7 @@ export default function ScheduleEditor() {
       testID="screen-schedule"
       footer={
         <Button
-          label={isNew ? 'Add schedule' : 'Save changes'}
+          label={isNew ? t('add_schedule') : t('save_changes')}
           onPress={save}
           busy={busy}
           disabled={!validation.ok}
@@ -79,12 +86,12 @@ export default function ScheduleEditor() {
       }
     >
       <View style={styles.top}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close" hitSlop={12}>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={12}>
           <Icon name="x" size={24} />
         </Pressable>
       </View>
       <Text variant="title" accessibilityRole="header">
-        {isNew ? 'New schedule' : 'Edit schedule'}
+        {isNew ? t('sched_new') : t('sched_edit')}
       </Text>
 
       {running ? (
@@ -92,8 +99,8 @@ export default function ScheduleEditor() {
           <Notice
             tone="pending"
             icon="lock"
-            title="This schedule is running"
-            body="You can add time now. Anything that shortens it can be set after it ends."
+            title={t('running_title')}
+            body={t('running_body')}
             testID="schedule-running"
           />
         </View>
@@ -103,33 +110,65 @@ export default function ScheduleEditor() {
           <Notice
             tone="pending"
             icon="clock"
-            title={pending.kind === 'schedule-delete' ? 'Removal is waiting' : 'A change is waiting'}
-            body={`Takes effect ${formatUntil(pending.effectiveAt, now)}. Cancel it in Settings.`}
+            title={pending.kind === 'schedule-delete' ? t('pending_removal_title') : t('pending_change_title')}
+            body={t('pending_body', { when: formatUntil(pending.effectiveAt, now) })}
           />
         </View>
       ) : null}
 
+      {isNew ? (
+        <>
+          <Text variant="label" tone="slate" style={styles.label}>
+            {t('start_from')}
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+            {TEMPLATES.map((tpl) => (
+              <Chip
+                key={tpl.key}
+                label={templateName(tpl.key)}
+                testID={`template-${tpl.key}`}
+                selected={
+                  draft.name === templateName(tpl.key) &&
+                  draft.startMin === tpl.startMin &&
+                  draft.endMin === tpl.endMin &&
+                  draft.days === tpl.days
+                }
+                onPress={() => setDraft((s) => scheduleFromTemplate(tpl, s.id, templateName(tpl.key)))}
+              />
+            ))}
+          </View>
+          {(() => {
+            const tpl = TEMPLATES.find((x) => templateName(x.key) === draft.name);
+            return tpl ? (
+              <Text variant="caption" tone="slate" style={{ marginTop: space.sm, marginLeft: space.xs }} testID="template-why">
+                {templateWhy(tpl.key)}
+              </Text>
+            ) : null;
+          })()}
+        </>
+      ) : null}
+
       <Text variant="label" tone="slate" style={styles.label} nativeID="name-label">
-        Name
+        {t('name')}
       </Text>
       <TextInput
         testID="schedule-name"
         accessibilityLabelledBy="name-label"
-        accessibilityLabel="Schedule name"
+        accessibilityLabel={t('schedule_name')}
         value={draft.name}
         maxLength={MAX_SCHEDULE_NAME}
         onChangeText={(name) => setDraft((s) => ({ ...s, name }))}
         style={styles.input}
-        placeholder="Study block"
+        placeholder={t('tpl_study_name')}
         placeholderTextColor={color.slate}
         autoCorrect={false}
       />
 
       <Text variant="label" tone="slate" style={styles.label}>
-        Days
+        {t('days')}
       </Text>
       <View style={styles.days}>
-        {DAY_LETTERS.map((l, d) => {
+        {dayLetters().map((l, d) => {
           const on = ((draft.days >> d) & 1) === 1;
           return (
             <Pressable
@@ -137,7 +176,7 @@ export default function ScheduleEditor() {
               testID={`day-${d}`}
               onPress={() => toggleDay(d)}
               accessibilityRole="checkbox"
-              accessibilityLabel={DAY_NAMES[d]}
+              accessibilityLabel={dayNames()[d]}
               accessibilityState={{ checked: on }}
               aria-checked={on}
               style={[styles.day, on && styles.dayOn]}
@@ -150,22 +189,22 @@ export default function ScheduleEditor() {
         })}
       </View>
       <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
-        <Chip label="Weekdays" selected={draft.days === WEEKDAYS} onPress={() => setDraft((s) => ({ ...s, days: WEEKDAYS }))} />
-        <Chip label="Every day" selected={draft.days === ALL_DAYS} onPress={() => setDraft((s) => ({ ...s, days: ALL_DAYS }))} />
+        <Chip label={t('days_weekdays')} selected={draft.days === WEEKDAYS} onPress={() => setDraft((s) => ({ ...s, days: WEEKDAYS }))} />
+        <Chip label={t('days_every')} selected={draft.days === ALL_DAYS} onPress={() => setDraft((s) => ({ ...s, days: ALL_DAYS }))} />
       </View>
 
       <Text variant="label" tone="slate" style={styles.label}>
-        Hours
+        {t('hours')}
       </Text>
       <View style={styles.timeGroup}>
-        <TimeRow label="Starts" value={draft.startMin} onChange={(startMin) => setDraft((s) => ({ ...s, startMin }))} testID="start" />
+        <TimeRow label={t('starts')} value={draft.startMin} onChange={(startMin) => setDraft((s) => ({ ...s, startMin }))} testID="start" />
         <View style={styles.hair} />
-        <TimeRow label="Ends" value={draft.endMin} onChange={(endMin) => setDraft((s) => ({ ...s, endMin }))} testID="end" />
+        <TimeRow label={t('ends')} value={draft.endMin} onChange={(endMin) => setDraft((s) => ({ ...s, endMin }))} testID="end" />
       </View>
       <Text variant="caption" tone="slate" style={{ marginTop: space.sm, marginLeft: space.xs }} testID="schedule-summary">
         {validation.ok
-          ? `${formatDuration(len * 60_000)} of focus${draft.endMin <= draft.startMin ? ', ending the next morning' : ''}.`
-          : validation.reason}
+          ? t(draft.endMin <= draft.startMin ? 'summary_overnight' : 'summary', { d: formatDuration(len * 60_000) })
+          : validationText(validation.code)}
       </Text>
 
       {error ? (
@@ -178,14 +217,14 @@ export default function ScheduleEditor() {
         <View style={{ marginTop: space.xxl }}>
           <Button
             kind="secondary"
-            label="Remove schedule"
+            label={t('remove_schedule')}
             onPress={remove}
             disabled={running || busy}
             testID="remove-schedule"
-            accessibilityHint="Removal takes effect after 24 hours"
+            accessibilityHint={t('remove_hint')}
           />
           <Text variant="caption" tone="slate" style={{ marginTop: space.sm, textAlign: 'center' }}>
-            Removing a schedule takes effect after 24 hours.
+            {t('remove_note')}
           </Text>
         </View>
       ) : null}
@@ -213,7 +252,7 @@ function TimeRow({
       <Pressable
         testID={`${testID}-minus`}
         accessibilityRole="button"
-        accessibilityLabel={`${label} 15 minutes earlier`}
+        accessibilityLabel={t('earlier', { label })}
         onPress={() => shift(-STEP)}
         style={styles.timeBtn}
       >
@@ -225,7 +264,7 @@ function TimeRow({
       <Pressable
         testID={`${testID}-plus`}
         accessibilityRole="button"
-        accessibilityLabel={`${label} 15 minutes later`}
+        accessibilityLabel={t('later', { label })}
         onPress={() => shift(STEP)}
         style={styles.timeBtn}
       >

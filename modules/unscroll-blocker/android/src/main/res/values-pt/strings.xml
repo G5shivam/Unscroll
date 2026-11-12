@@ -1,0 +1,23 @@
+<resources>
+  <string name="unscroll_service_summary">Oculta o feed e os Reels do Instagram e bloqueia o Instagram durante o foco.</string>
+  <string name="unscroll_service_description">O Unscroll lê a tela só no Instagram, nos navegadores e nos ajustes que poderiam desligar o Unscroll. Ele usa isso para ocultar o feed, os Reels e o Explorar, e para bloquear o Instagram nas suas horas de foco. O conteúdo da tela é verificado no seu celular e descartado na hora. Nada é salvo ou enviado.</string>
+  <string name="unscroll_overlay_locked_title">O Instagram está bloqueado</string>
+  <string name="unscroll_overlay_locked_body">Seu foco termina em %1$s. O Unscroll não tem botão de parar.</string>
+  <string name="unscroll_overlay_settings_title">Bloqueado durante o foco</string>
+  <string name="unscroll_overlay_settings_body">Este ajuste poderia desligar o Unscroll, então fica indisponível por %1$s.</string>
+  <string name="unscroll_overlay_reels_title">Os Reels estão ocultos</string>
+  <string name="unscroll_overlay_reels_body">Suas mensagens continuam aqui.</string>
+  <string name="unscroll_overlay_feed_title">O feed está oculto</string>
+  <string name="unscroll_overlay_feed_body">Mensagens, publicações e seu perfil continuam funcionando.</string>
+  <string name="unscroll_overlay_explore_title">O Explorar está oculto</string>
+  <string name="unscroll_overlay_explore_body">Procure alguém pelas suas mensagens.</string>
+  <string name="unscroll_overlay_stories_title">Os Stories estão ocultos</string>
+  <string name="unscroll_overlay_stories_body">Você escolheu ocultar os Stories no Unscroll.</string>
+  <string name="unscroll_overlay_hidden_title">Oculto</string>
+  <string name="unscroll_overlay_btn_messages">Ir para mensagens</string>
+  <string name="unscroll_overlay_btn_back">Voltar</string>
+  <string name="unscroll_overlay_btn_home">Ir para a tela inicial</string>
+  <string name="unscroll_dur_min">%1$d min</string>
+  <string name="unscroll_dur_h">%1$d h</string>
+  <string name="unscroll_dur_h_min">%1$d h %2$d min</string>
+</resources>

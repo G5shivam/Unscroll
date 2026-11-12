@@ -1,0 +1,23 @@
+<resources>
+  <string name="unscroll_service_summary">Instagram की फ़ीड और रील्स छिपाता है, और फ़ोकस के दौरान Instagram लॉक करता है।</string>
+  <string name="unscroll_service_description">Unscroll स्क्रीन सिर्फ़ Instagram, वेब ब्राउज़र और उन सेटिंग्स पेजों में पढ़ता है जो Unscroll बंद कर सकते हैं। इसका इस्तेमाल फ़ीड, रील्स और एक्सप्लोर छिपाने और आपके फ़ोकस घंटों में Instagram लॉक करने के लिए होता है। स्क्रीन की सामग्री आपके फ़ोन पर जाँची जाती है और तुरंत हटा दी जाती है। कुछ भी सेव या कहीं भेजा नहीं जाता।</string>
+  <string name="unscroll_overlay_locked_title">Instagram लॉक है</string>
+  <string name="unscroll_overlay_locked_body">आपका फ़ोकस %1$s में ख़त्म होगा। Unscroll में कोई स्टॉप बटन नहीं है।</string>
+  <string name="unscroll_overlay_settings_title">फ़ोकस के दौरान लॉक</string>
+  <string name="unscroll_overlay_settings_body">यह सेटिंग Unscroll बंद कर सकती है, इसलिए यह %1$s तक उपलब्ध नहीं है।</string>
+  <string name="unscroll_overlay_reels_title">रील्स छिपी हैं</string>
+  <string name="unscroll_overlay_reels_body">आपके मैसेज यहीं हैं।</string>
+  <string name="unscroll_overlay_feed_title">फ़ीड छिपी है</string>
+  <string name="unscroll_overlay_feed_body">मैसेज, पोस्ट करना और आपकी प्रोफ़ाइल अब भी काम करते हैं।</string>
+  <string name="unscroll_overlay_explore_title">एक्सप्लोर छिपा है</string>
+  <string name="unscroll_overlay_explore_body">इसके बजाय अपने मैसेज से किसी को खोजें।</string>
+  <string name="unscroll_overlay_stories_title">स्टोरीज़ छिपी हैं</string>
+  <string name="unscroll_overlay_stories_body">आपने Unscroll में स्टोरीज़ छिपाना चुना है।</string>
+  <string name="unscroll_overlay_hidden_title">छिपा है</string>
+  <string name="unscroll_overlay_btn_messages">मैसेज पर जाएँ</string>
+  <string name="unscroll_overlay_btn_back">वापस जाएँ</string>
+  <string name="unscroll_overlay_btn_home">होम स्क्रीन पर जाएँ</string>
+  <string name="unscroll_dur_min">%1$d मिनट</string>
+  <string name="unscroll_dur_h">%1$d घंटे</string>
+  <string name="unscroll_dur_h_min">%1$d घंटे %2$d मिनट</string>
+</resources>
