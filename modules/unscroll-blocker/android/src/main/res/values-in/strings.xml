@@ -1,5 +1,5 @@
 <resources>
-  <string name="unscroll_service_summary">Menyembunyikan feed dan Reels Instagram, dan mengunci Instagram saat fokus.</string>
+  <string name="unscroll_service_summary">Mengunci Instagram selama jam fokusmu. Bisa juga menyembunyikan feed dan Reels, jika kamu mau.</string>
   <string name="unscroll_service_description">Unscroll hanya membaca layar di Instagram, browser web, dan halaman Pengaturan yang bisa mematikan Unscroll. Ini dipakai untuk menyembunyikan feed, Reels, dan Jelajahi, serta mengunci Instagram selama jam fokusmu. Isi layar diperiksa di ponselmu lalu langsung dibuang. Tidak ada yang disimpan atau dikirim.</string>
   <string name="unscroll_overlay_locked_title">Instagram terkunci</string>
   <string name="unscroll_overlay_locked_body">Fokusmu berakhir dalam %1$s. Unscroll tidak punya tombol berhenti.</string>

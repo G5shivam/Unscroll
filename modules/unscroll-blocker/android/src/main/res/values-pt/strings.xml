@@ -1,5 +1,5 @@
 <resources>
-  <string name="unscroll_service_summary">Oculta o feed e os Reels do Instagram e bloqueia o Instagram durante o foco.</string>
+  <string name="unscroll_service_summary">Bloqueia o Instagram nas suas horas de foco. Também pode ocultar o feed e os Reels, se você quiser.</string>
   <string name="unscroll_service_description">O Unscroll lê a tela só no Instagram, nos navegadores e nos ajustes que poderiam desligar o Unscroll. Ele usa isso para ocultar o feed, os Reels e o Explorar, e para bloquear o Instagram nas suas horas de foco. O conteúdo da tela é verificado no seu celular e descartado na hora. Nada é salvo ou enviado.</string>
   <string name="unscroll_overlay_locked_title">O Instagram está bloqueado</string>
   <string name="unscroll_overlay_locked_body">Seu foco termina em %1$s. O Unscroll não tem botão de parar.</string>

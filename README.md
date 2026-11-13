@@ -1,8 +1,9 @@
 # Unscroll
 
-Instagram without the feed. Unscroll hides Instagram's Home feed, Reels and
-Explore while keeping messages and posting, and fully locks Instagram during
-Focus Hours. A lock has no stop button.
+Instagram, on your terms. Unscroll fully locks Instagram during the Focus Hours
+you choose. Outside them Instagram works as usual, unless you also opt in to
+hiding the Home feed, Reels, Explore or Stories (messages and posting always
+keep working). A lock has no stop button.
 
 One React Native (Expo SDK 58) codebase for **Android and iOS**:
 
@@ -10,7 +11,7 @@ One React Native (Expo SDK 58) codebase for **Android and iOS**:
 | --- | --- | --- |
 | Feed / Reels / Explore hidden | Inside the official Instagram app (Accessibility service + overlay) | Official app shielded by Screen Time; Instagram used in Unscroll's "Clean Instagram" view |
 | Focus lock | Instagram, Instagram Lite and instagram.com in browsers | Official app always shielded; Clean Instagram locked |
-| Clock / time-zone tampering | Locks and 24 h waits run on the monotonic clock | Same |
+| Clock / time-zone tampering | Locks run on the monotonic clock | Same |
 | Escape | Uninstall, or switch Unscroll off in Settings › Accessibility (detected, resets streak) | Uninstall, or turn off Screen Time access (detected, resets streak) |
 
 ## Run it
@@ -45,7 +46,7 @@ in Play Console (the in-app disclosure and consent screen is already built).
 
 ```
 src/core/            Pure TypeScript engine: schedules, trusted clock, sessions,
-                     window locks, 24 h cooling-off, lock ratchet
+                     window locks, lock ratchet
 src/state/           Controller (engine + native enforcer + storage), persistence
 src/native/          Bridge to the native module, plus a simulated enforcer (web/tests)
 src/inject/          Clean Instagram: injected script + strict config validation

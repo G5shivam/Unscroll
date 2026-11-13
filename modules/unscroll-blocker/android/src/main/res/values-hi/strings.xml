@@ -1,5 +1,5 @@
 <resources>
-  <string name="unscroll_service_summary">Instagram की फ़ीड और रील्स छिपाता है, और फ़ोकस के दौरान Instagram लॉक करता है।</string>
+  <string name="unscroll_service_summary">आपके फ़ोकस घंटों में Instagram लॉक करता है। चाहें तो फ़ीड और रील्स भी छिपा सकता है।</string>
   <string name="unscroll_service_description">Unscroll स्क्रीन सिर्फ़ Instagram, वेब ब्राउज़र और उन सेटिंग्स पेजों में पढ़ता है जो Unscroll बंद कर सकते हैं। इसका इस्तेमाल फ़ीड, रील्स और एक्सप्लोर छिपाने और आपके फ़ोकस घंटों में Instagram लॉक करने के लिए होता है। स्क्रीन की सामग्री आपके फ़ोन पर जाँची जाती है और तुरंत हटा दी जाती है। कुछ भी सेव या कहीं भेजा नहीं जाता।</string>
   <string name="unscroll_overlay_locked_title">Instagram लॉक है</string>
   <string name="unscroll_overlay_locked_body">आपका फ़ोकस %1$s में ख़त्म होगा। Unscroll में कोई स्टॉप बटन नहीं है।</string>

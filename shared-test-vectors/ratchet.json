@@ -15,7 +15,8 @@
         "startMin": 540,
         "endMin": 780
       }
-    ]
+    ],
+    "waitHours": 24
   },
   "cases": [
     {
@@ -254,6 +255,83 @@
         "startMin": 0,
         "endMin": 60
       },
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "raise the wait (stricter)",
+      "setWait": 48,
+      "grants": [],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "lower the wait without grant",
+      "setWait": 2,
+      "grants": [],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "lower the wait with a matured grant",
+      "setWait": 2,
+      "grants": [
+        {
+          "id": "w",
+          "kind": "wait-shorten",
+          "waitHours": 2,
+          "waitedMs": 86400000
+        }
+      ],
+      "focus": false,
+      "ok": true
+    },
+    {
+      "name": "lower the wait below what the grant allows",
+      "setWait": 0,
+      "grants": [
+        {
+          "id": "w",
+          "kind": "wait-shorten",
+          "waitHours": 2,
+          "waitedMs": 86400000
+        }
+      ],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "lower the wait with a grant 1ms too young",
+      "setWait": 2,
+      "grants": [
+        {
+          "id": "w",
+          "kind": "wait-shorten",
+          "waitHours": 2,
+          "waitedMs": 86399999
+        }
+      ],
+      "focus": false,
+      "ok": false
+    },
+    {
+      "name": "lower the wait during focus",
+      "setWait": 2,
+      "grants": [
+        {
+          "id": "w",
+          "kind": "wait-shorten",
+          "waitHours": 2,
+          "waitedMs": 86400000
+        }
+      ],
+      "focus": true,
+      "ok": false
+    },
+    {
+      "name": "wait above 168 hours is malformed",
+      "setWait": 169,
       "grants": [],
       "focus": false,
       "ok": false

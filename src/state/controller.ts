@@ -341,6 +341,12 @@ export class UnscrollController {
           this.state = cancelPending(this.state, p.id);
           return { ok: false, error: 'enforcer-refused' };
         }
+        // No wait: outside focus the change is already due, so apply it now (the enforcer
+        // still checks it). During focus it stays pending until the focus ends.
+        if (this.state.policy.waitHours === 0) {
+          await this.syncNow();
+          if (!this.state.pending.some((x) => x.id === p.id)) return { ok: true, applied: 'now' };
+        }
       }
       return { ok: true, applied: 'pending', effectiveAt: p?.effectiveAt };
     }
@@ -350,5 +356,5 @@ export class UnscrollController {
 }
 
 function toGrant(p: PendingChange): LooseningGrant {
-  return { id: p.id, kind: p.kind, surface: p.surface, scheduleId: p.scheduleId, waitedMs: p.waitedMs };
+  return { id: p.id, kind: p.kind, surface: p.surface, scheduleId: p.scheduleId, waitHours: p.waitHours, waitedMs: p.waitedMs };
 }

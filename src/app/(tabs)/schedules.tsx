@@ -5,7 +5,7 @@ import { minutesUntilEnd } from '../../core/schedule';
 import { t } from '../../i18n';
 import { useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
-import { formatDays, formatRange, formatUntil } from '../../ui/format';
+import { formatDays, formatRange } from '../../ui/format';
 import { Group, Icon, Notice, Row, Screen } from '../../ui/primitives';
 import { Text } from '../../ui/Text';
 import { color, radius, space } from '../../ui/theme';
@@ -37,9 +37,7 @@ export default function Schedules() {
                 title={s.name}
                 detail={
                   pending
-                    ? t(pending.kind === 'schedule-delete' ? 'removal_takes' : 'change_takes', {
-                        when: formatUntil(pending.effectiveAt, now),
-                      })
+                    ? t(pending.kind === 'schedule-delete' ? 'removal_takes' : 'change_takes')
                     : `${formatDays(s.days)}, ${formatRange(s.startMin, s.endMin)}`
                 }
                 onPress={() => router.push(`/schedule/${s.id}`)}

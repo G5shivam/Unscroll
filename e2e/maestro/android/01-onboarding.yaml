@@ -20,5 +20,10 @@ name: Onboarding turns on blocking
 - back
 - assertVisible: "On"
 - tapOn: { id: "permissions-continue" }
+# Nothing is hidden outside focus by default. Opt in here so 02-reels-hidden
+# can check the optional "also hide outside focus hours" feature.
+- assertVisible: "Also hide outside focus hours?"
+- tapOn: { id: "default-feed" }
+- tapOn: { id: "default-reels" }
 - tapOn: { id: "finish-setup" }
 - assertVisible: { id: "lock-panel-open" }

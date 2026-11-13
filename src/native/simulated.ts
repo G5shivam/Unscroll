@@ -61,22 +61,14 @@ export class SimulatedBlocker implements Blocker {
 
   async registerLoosening(grant: Omit<LooseningGrant, 'waitedMs'>): Promise<void> {
     // One grant per target: a new request restarts the wait (mirrors Enforcer.kt).
-    const others = this.grants.filter(
-      (g) =>
-        g.id !== grant.id &&
-        !(grant.surface && g.surface === grant.surface) &&
-        !(grant.scheduleId && g.scheduleId === grant.scheduleId),
-    );
+    const sameTarget = (g: Omit<LooseningGrant, 'waitedMs'>) =>
+      g.id === grant.id ||
+      (!!grant.surface && g.surface === grant.surface) ||
+      (!!grant.scheduleId && g.scheduleId === grant.scheduleId) ||
+      (grant.kind === 'wait-shorten' && g.kind === 'wait-shorten');
+    const others = this.grants.filter((g) => !sameTarget(g));
     if (others.length >= 50) throw new Error('grant refused');
-    this.grants = [
-      ...this.grants.filter(
-        (g) =>
-          g.id !== grant.id &&
-          !(grant.surface && g.surface === grant.surface) &&
-          !(grant.scheduleId && g.scheduleId === grant.scheduleId),
-      ),
-      { ...grant, registeredMono: this.mono() + this.offsetMs },
-    ];
+    this.grants = [...others, { ...grant, registeredMono: this.mono() + this.offsetMs }];
   }
 
   async cancelLoosening(id: string): Promise<void> {

@@ -4,7 +4,15 @@ export const DAY = 24 * HOUR;
 export const MINUTES_PER_DAY = 1440;
 export const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
 
-/** PRD supporting rule: loosening changes wait 24 hours. */
+/**
+ * Loosening (showing something again, editing or removing a schedule) applies
+ * instantly outside focus: the app runs with Policy.waitHours = 0. During focus
+ * nothing loosens until it ends. The engine still supports a wait (0–168 h),
+ * which the tests exercise, but the app never sets one.
+ */
+export const DEFAULT_WAIT_HOURS = 0;
+export const MAX_WAIT_HOURS = 168;
+/** A 24 h wait, used by tests of the waiting mechanism. */
 export const COOLING_OFF_MS = 24 * HOUR;
 
 /** PRD FR-3: one-off sessions are 15 minutes to 12 hours. */

@@ -7,6 +7,9 @@ import { UnscrollController, type KeyValueStorage } from '../src/state/controlle
 import { STORAGE_KEY } from '../src/state/persist';
 import { FakeClock, HOUR, MIN, at, testEnv } from './helpers';
 
+/** The user turned on "also hide outside focus" (off by default since the focus-only model). */
+const HIDE_OUTSIDE_FOCUS = { feed: true, reels: true, explore: true, stories: false };
+
 class MemoryStorage implements KeyValueStorage {
   data = new Map<string, string>();
   fail = false;
@@ -35,6 +38,7 @@ async function onboard(ctrl: UnscrollController, blocker: SimulatedBlocker) {
   await ctrl.init();
   await ctrl.acceptDisclosure();
   await blocker.requestPermission();
+  await ctrl.setInitialSurfaces(HIDE_OUTSIDE_FOCUS);
   await ctrl.completeOnboarding();
 }
 
@@ -48,6 +52,16 @@ describe('UnscrollController', () => {
     expect(snap.state.enforcementArmed).toBe(true);
     expect(blocker.policy?.surfaces.reels).toBe(true);
     expect(JSON.parse(storage.data.get(STORAGE_KEY)!).onboarded).toBe(true);
+  });
+
+  test('by default nothing is hidden outside focus; focus still locks', async () => {
+    const { ctrl, blocker } = setup();
+    await ctrl.init();
+    await blocker.requestPermission();
+    await ctrl.completeOnboarding();
+    expect(blocker.policy?.surfaces).toEqual({ feed: false, reels: false, explore: false, stories: false });
+    expect(await ctrl.startFocus(HOUR)).toEqual({ ok: true, applied: 'now' });
+    expect(ctrl.getSnapshot().focus.active).toBe(true);
   });
 
   test('starting focus reaches the enforcer and survives a restart', async () => {
@@ -65,26 +79,22 @@ describe('UnscrollController', () => {
     if (f.active) expect(f.remainingMs).toBe(50 * MIN);
   });
 
-  test('a loosening is registered with the enforcer, which only accepts it after 24 hours', async () => {
+  test('toggles apply instantly outside focus; during focus they wait for it to end', async () => {
     const { ctrl, blocker, clock } = setup();
-    await onboard(ctrl, blocker);
-    const r = await ctrl.setSurface('reels', false);
-    expect(r).toMatchObject({ ok: true, applied: 'pending' });
-    expect(blocker.grants).toHaveLength(1);
+    await onboard(ctrl, blocker); // Reels hidden outside focus (opted in)
+    expect(await ctrl.setSurface('reels', false)).toEqual({ ok: true, applied: 'now' });
+    expect(blocker.policy?.surfaces.reels).toBe(false);
+    expect(await ctrl.setSurface('reels', true)).toEqual({ ok: true, applied: 'now' });
+    expect(blocker.policy?.surfaces.reels).toBe(true);
 
-    // A premature push is refused by the enforcer's own ratchet.
-    const early = await blocker.applyPolicy(
-      { ...blocker.policy!, surfaces: { ...blocker.policy!.surfaces, reels: false } },
-      blocker.grants.map((g) => ({ ...g, waitedMs: 0 })),
-    );
-    expect(early.accepted).toBe(false);
-
-    clock.advance(COOLING_OFF_MS);
+    await ctrl.startFocus(HOUR);
+    expect(await ctrl.setSurface('reels', false)).toMatchObject({ ok: true, applied: 'pending' });
+    expect(blocker.policy?.surfaces.reels).toBe(true);
+    clock.advance(HOUR);
     await ctrl.tick();
     expect(ctrl.getSnapshot().state.policy.surfaces.reels).toBe(false);
     expect(blocker.policy?.surfaces.reels).toBe(false);
   });
-
   test('turning the blocker off after onboarding is recorded as an escape', async () => {
     const { ctrl, blocker } = setup();
     await onboard(ctrl, blocker);
@@ -134,3 +144,4 @@ describe('UnscrollController', () => {
     expect(fn).toHaveBeenCalled();
   });
 });
+

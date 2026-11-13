@@ -1,3 +1,4 @@
+# Needs "also hide outside focus hours" on for feed and Reels (set in 01-onboarding).
 appId: com.instagram.android
 name: Reels and the feed are covered, DMs are not
 ---

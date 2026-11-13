@@ -14,20 +14,31 @@ data class Schedule(val id: String, val name: String, val days: Int, val startMi
     mapOf("id" to id, "name" to name, "days" to days, "startMin" to startMin, "endMin" to endMin)
 }
 
-data class Policy(val surfaces: Map<Surface, Boolean>, val schedules: List<Schedule>) {
+/**
+ * [waitHours]: how long any loosening waits, chosen by the user (0–168).
+ * Raising it is stricter; lowering it needs a matured WAIT_SHORTEN grant.
+ */
+data class Policy(
+  val surfaces: Map<Surface, Boolean>,
+  val schedules: List<Schedule>,
+  val waitHours: Int = Limits.DEFAULT_WAIT_HOURS,
+) {
   fun blocks(s: Surface): Boolean = surfaces[s] == true
+
+  val waitMs: Long get() = waitHours * Limits.HOUR
 
   fun toJson(): Map<String, Any?> = mapOf(
     "surfaces" to Surface.values().associate { it.key to blocks(it) },
     "schedules" to schedules.map { it.toJson() },
+    "waitHours" to waitHours,
   )
 
   companion object {
-    /** Until the app sends a policy, block the feed, Reels and Explore (fail closed). */
-    val DEFAULT = Policy(
-      mapOf(Surface.FEED to true, Surface.REELS to true, Surface.EXPLORE to true, Surface.STORIES to false),
-      emptyList(),
-    )
+    /**
+     * Nothing hidden outside focus unless the user turns it on (mirrors
+     * DEFAULT_POLICY in engine.ts). Focus always locks the whole app.
+     */
+    val DEFAULT = Policy(Surface.values().associateWith { false }, emptyList())
 
     /** Strict structural parse; returns null on anything unexpected. */
     fun fromJson(v: Any?): Policy? {
@@ -40,13 +51,17 @@ data class Policy(val surfaces: Map<Surface, Boolean>, val schedules: List<Sched
       val schedules = ArrayList<Schedule>()
       for (item in list) schedules.add(ScheduleRules.parse(item) ?: return null)
       if (schedules.map { it.id }.toSet().size != schedules.size) return null
-      return Policy(surfaces, schedules)
+      // Not present in older saved state: the default (no wait).
+      val wait = if (m.containsKey("waitHours")) m["waitHours"].asIntOrNull()?.takeIf { it in 0..Limits.MAX_WAIT_HOURS } ?: return null
+        else Limits.DEFAULT_WAIT_HOURS
+      return Policy(surfaces, schedules, wait)
     }
   }
 }
 
 enum class GrantKind(val key: String) {
-  SURFACE_OFF("surface-off"), SCHEDULE_DELETE("schedule-delete"), SCHEDULE_EDIT("schedule-edit");
+  SURFACE_OFF("surface-off"), SCHEDULE_DELETE("schedule-delete"), SCHEDULE_EDIT("schedule-edit"),
+  WAIT_SHORTEN("wait-shorten");
 
   companion object {
     fun from(key: String?): GrantKind? = values().firstOrNull { it.key == key }
@@ -65,10 +80,12 @@ data class Grant(
   val waitedMs: Long,
   val lastMono: Long?,
   val lastBootId: String?,
+  /** WAIT_SHORTEN: the lowest waiting time this grant allows. */
+  val waitHours: Int? = null,
 ) {
   fun toJson(): Map<String, Any?> = mapOf(
     "id" to id, "kind" to kind.key, "surface" to surface?.key, "scheduleId" to scheduleId,
-    "waitedMs" to waitedMs, "lastMono" to lastMono, "lastBootId" to lastBootId,
+    "waitedMs" to waitedMs, "lastMono" to lastMono, "lastBootId" to lastBootId, "waitHours" to waitHours,
   )
 
   companion object {
@@ -83,6 +100,10 @@ data class Grant(
         GrantKind.SURFACE_OFF -> {
           val s = Surface.from(m["surface"].asStringOrNull()) ?: return null
           Grant(id, kind, s, null, 0, monoMs, bootId)
+        }
+        GrantKind.WAIT_SHORTEN -> {
+          val h = m["waitHours"].asIntOrNull()?.takeIf { it in 0..Limits.MAX_WAIT_HOURS } ?: return null
+          Grant(id, kind, null, null, 0, monoMs, bootId, h)
         }
         else -> {
           val sid = m["scheduleId"].asStringOrNull()?.takeIf { ID.matches(it) } ?: return null
@@ -161,7 +182,10 @@ object Limits {
   const val MINUTE = 60_000L
   const val HOUR = 60 * MINUTE
   const val DAY = 24 * HOUR
-  const val COOLING_OFF_MS = 24 * HOUR
+  /** Loosening is instant outside focus (mirrors DEFAULT_WAIT_HOURS in constants.ts). */
+  const val DEFAULT_WAIT_HOURS = 0
+  const val MAX_WAIT_HOURS = 168
+  const val COOLING_OFF_MS = DEFAULT_WAIT_HOURS * HOUR
   const val MIN_SESSION_MS = 15 * MINUTE
   const val MAX_SESSION_MS = 12 * HOUR
   const val MAX_SCHEDULES = 20

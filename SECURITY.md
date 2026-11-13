@@ -2,12 +2,15 @@
 
 ## What Unscroll promises
 
-1. Feed, Reels and Explore stay hidden; messages and posting work.
+1. During Focus Hours, Instagram is fully locked. Outside them nothing is hidden
+   unless the user opts in; whatever they opt in to stays hidden, and messages and
+   posting keep working.
 2. A Focus lock (session or schedule window) cannot be paused, shortened,
    edited or deleted once it starts, and changing the clock or time zone does
    not end it.
-3. Any loosening (showing something again, removing or shortening a schedule)
-   takes effect only after **24 hours of real elapsed time**, and never during Focus.
+3. Outside focus, every change applies instantly: hiding or showing anything,
+   editing or removing a schedule. During focus nothing loosens (no un-hiding,
+   no shortening or removing a running schedule) until the focus ends.
 4. Ending a lock early takes a deliberate system-level step: uninstalling
    Unscroll, or switching off its permission (Android Accessibility / iOS
    Screen Time). Both are detected and reset the streak. Uninstalling always works.

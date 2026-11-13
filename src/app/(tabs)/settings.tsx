@@ -7,14 +7,13 @@ import { t } from '../../i18n';
 import { surfaceName } from '../../ui/copy';
 import { useController, useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
-import { formatUntil } from '../../ui/format';
 import { Group, Notice, Row, Screen, Toggle } from '../../ui/primitives';
 import { Text } from '../../ui/Text';
 import { space } from '../../ui/theme';
 
 
 export default function Settings() {
-  const { state, now, status, enforcerSynced } = useUnscroll();
+  const { state, status, enforcerSynced } = useUnscroll();
   const ctrl = useController();
   const [message, setMessage] = useState<string | null>(null);
   const IOS = Platform.OS === 'ios';
@@ -49,7 +48,7 @@ export default function Settings() {
             <Row
               key={s.key}
               title={s.title}
-              detail={pending ? t('shows_again', { when: formatUntil(pending.effectiveAt, now) }) : undefined}
+              detail={pending ? t('after_focus') : undefined}
               right={
                 <Toggle
                   testID={`surface-${s.key}`}
@@ -70,7 +69,7 @@ export default function Settings() {
               key={p.id}
               testID={`pending-${p.id}`}
               title={describe(p)}
-              detail={formatUntil(p.effectiveAt, now)}
+              detail={t('after_focus')}
               right={
                 <Button
                   kind="secondary"

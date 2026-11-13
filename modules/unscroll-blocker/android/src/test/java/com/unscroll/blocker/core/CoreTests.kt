@@ -88,6 +88,7 @@ fun ratchetVectors() {
     c["replaceSchedule"]?.let { r -> schedules = schedules.map { if (it.asMapX()["id"] == r.asMapX()["id"]) r else it }.toMutableList() }
     inc["surfaces"] = surfaces
     inc["schedules"] = schedules
+    c["setWait"]?.let { inc["waitHours"] = it }
     val grants = c["grants"].asListX().map { Grant.fromJson(it)!! }
     val incoming = Policy.fromJson(inc)
     val ok = incoming != null && PolicyRatchet.check(current, incoming, grants, c["focus"] as Boolean).ok
@@ -97,7 +98,9 @@ fun ratchetVectors() {
 
 // --- Android-specific behaviour ---------------------------------------------
 
-val policy = Policy.DEFAULT
+/** A user who turned on "also hide outside focus" for feed, Reels and Explore. */
+/** (24 h wait: exercises the waiting mechanism; the app itself always sends 0.) */
+val policy = Policy(Surface.values().associateWith { it != Surface.STORIES }, emptyList(), 24)
 fun n(id: String? = null, text: String? = null, desc: String? = null, selected: Boolean = false) = NodeSignal(id, text, desc, selected)
 
 fun classifierTests() {
@@ -121,9 +124,9 @@ fun classifierTests() {
   check("Indonesian home label", cls(ig, listOf(n(desc = "Beranda", selected = true))) == Verdict.BlockSurface(Surface.FEED))
   check("DMs allowed", cls(ig, listOf(n("$ig:id/direct_thread_list"), n(desc = "Home", selected = false))) == Verdict.Allow)
   check("stories allowed by default", cls(ig, listOf(n("$ig:id/reel_viewer_root"))) == Verdict.Allow)
-  val withStories = Policy(policy.surfaces + (Surface.STORIES to true), emptyList())
+  val withStories = Policy(policy.surfaces + (Surface.STORIES to true), emptyList(), 24)
   check("stories blocked when enabled", cls(ig, listOf(n("$ig:id/reel_viewer_root")), p = withStories) == Verdict.BlockSurface(Surface.STORIES))
-  val reelsOff = Policy(policy.surfaces + (Surface.REELS to false), emptyList())
+  val reelsOff = Policy(policy.surfaces + (Surface.REELS to false), emptyList(), 24)
   check("reels allowed when unblocked", cls(ig, listOf(n("$ig:id/clips_viewer_view_pager")), p = reelsOff) == Verdict.Allow)
   check("focus blocks all of Instagram", cls(ig, listOf(n("$ig:id/direct_thread_list")), focus = true) == Verdict.BlockApp)
   check("focus blocks Instagram Lite", cls("com.instagram.lite", emptyList(), focus = true) == Verdict.BlockApp)
@@ -175,6 +178,57 @@ class FakeClock(var wall: Long, var mono: Long = 1_000, var boot: String = "b1",
   fun advance(ms: Long) { wall += ms; mono += ms }
 }
 
+/** The user-chosen waiting time (Policy.waitHours) on the real enforcer. */
+fun waitTests() {
+  val H = Limits.HOUR
+  val clock = FakeClock(6 * Limits.DAY + 12 * H)
+  val e = Enforcer(MemStore(), clock)
+  fun pol(reels: Boolean, feed: Boolean, wait: Int) =
+    MiniJson.stringify(Policy(policy.surfaces + mapOf(Surface.REELS to reels, Surface.FEED to feed), emptyList(), wait).toJson())
+
+  check("onboarding: chosen 0 h wait accepted", e.applyPolicy(pol(true, true, 0), "[]").ok)
+  check("0 h: grant", e.registerGrant("""{"id":"z1","kind":"surface-off","surface":"reels"}"""))
+  check("0 h wait: loosening applies right away", e.applyPolicy(pol(false, true, 0), """["z1"]""").ok)
+  check("0 h wait: still needs the grant", !e.applyPolicy(pol(false, false, 0), "[]").ok)
+  check("raising the wait is instant", e.applyPolicy(pol(false, true, 2), "[]").ok)
+  check("2 h: grant", e.registerGrant("""{"id":"f1","kind":"surface-off","surface":"feed"}"""))
+  clock.advance(2 * H - 1)
+  check("2 h wait: 1 ms early refused", !e.applyPolicy(pol(false, false, 2), """["f1"]""").ok)
+  clock.advance(1)
+  check("2 h wait: matured", e.applyPolicy(pol(false, false, 2), """["f1"]""").ok)
+  check("lowering the wait without a grant is refused", !e.applyPolicy(pol(false, false, 1), "[]").ok)
+  check("bad wait-shorten grant refused", !e.registerGrant("""{"id":"w0","kind":"wait-shorten","waitHours":999}"""))
+  check("wait-shorten grant", e.registerGrant("""{"id":"w1","kind":"wait-shorten","waitHours":1}"""))
+  clock.advance(H)
+  check("lowering waits the CURRENT wait (2 h), not the new one", !e.applyPolicy(pol(false, false, 1), """["w1"]""").ok)
+  clock.advance(H)
+  check("cannot go below what the grant allows", !e.applyPolicy(pol(false, false, 0), """["w1"]""").ok)
+  check("lowering applies after the current wait", e.applyPolicy(pol(false, false, 1), """["w1"]""").ok)
+  check("wait-shorten grant consumed", e.grantsSnapshot().none { it.id == "w1" })
+  check("over 168 h is malformed", !e.applyPolicy(pol(false, false, 169), "[]").ok)
+  check("old policy without waitHours reads as no wait",
+    Policy.fromJson(MiniJson.parse("""{"surfaces":{"feed":false,"reels":false,"explore":false,"stories":false},"schedules":[]}"""))?.waitHours == 0)
+
+  // Saved state from a build with a wait loads with none: toggles are instant.
+  val stw = MemStore()
+  stw.data = """{"v":3,"policySet":true,"policy":{"surfaces":{"feed":true,"reels":true,"explore":false,"stories":false},"schedules":[],"waitHours":24},""" +
+    """"grants":[{"id":"g1","kind":"surface-off","surface":"reels","waitedMs":0},{"id":"w1","kind":"wait-shorten","waitHours":1,"waitedMs":0}],""" +
+    """"session":null,"windows":[],"clock":null,"blocks":0}"""
+  val ew = Enforcer(stw, FakeClock(6 * Limits.DAY + 12 * H))
+  check("saved wait reset to 0", ew.currentPolicy().waitHours == 0)
+  check("wait-shorten grants dropped, others kept", ew.grantsSnapshot().map { it.id } == listOf("g1"))
+  check("reset persisted", stw.data!!.contains("\"waitHours\":0"))
+  check("no wait: the pending un-hide applies at once", ew.applyPolicy(
+    MiniJson.stringify(Policy(mapOf(Surface.FEED to true, Surface.REELS to false, Surface.EXPLORE to false, Surface.STORIES to false), emptyList(), 0).toJson()), """["g1"]""").ok)
+  check("no wait: still refused during focus", run {
+    val e2 = Enforcer(MemStore(), FakeClock(6 * Limits.DAY + 12 * H))
+    e2.applyPolicy(pol(true, true, 0), "[]")
+    e2.startSession("s1", H)
+    e2.registerGrant("""{"id":"r9","kind":"surface-off","surface":"reels"}""")
+    !e2.applyPolicy(pol(false, true, 0), """["r9"]""").ok
+  })
+}
+
 fun enforcerTests() {
   val H = Limits.HOUR
   // t = 0 is "Sunday 00:00" for FakeClock.local; start Saturday noon.
@@ -200,9 +254,12 @@ fun enforcerTests() {
   e.now()
   e = Enforcer(store, clock)
   check("persisted across restart", e.focus().active && e.focus().remainingMs == 90 * Limits.MINUTE)
+  // Loading resets any saved wait to 0 (the app's setting); put the 24 h test wait back. Raising is stricter.
+  check("restart resets the wait", e.currentPolicy().waitHours == 0)
+  check("24 h test wait restored", e.applyPolicy(MiniJson.stringify(policy.toJson()), "[]").ok)
 
   // Loosening during focus is refused even with a grant.
-  val looser = MiniJson.stringify(Policy(policy.surfaces + (Surface.REELS to false), emptyList()).toJson())
+  val looser = MiniJson.stringify(Policy(policy.surfaces + (Surface.REELS to false), emptyList(), 24).toJson())
   check("first policy accepted (onboarding)", Enforcer(MemStore(), FakeClock(0)).applyPolicy(looser, "[]").ok)
   check("register grant", e.registerGrant("""{"id":"g1","kind":"surface-off","surface":"reels"}"""))
   check("refuse unmatured grant", !e.applyPolicy(looser, """["g1"]""").ok)
@@ -220,7 +277,7 @@ fun enforcerTests() {
   clock.mono += 23 * H
   check("grant b replaces a", e.registerGrant("""{"id":"a2","kind":"surface-off","surface":"feed"}"""))
   clock.mono += 2 * H
-  val noFeed = MiniJson.stringify(Policy(policy.surfaces + (Surface.FEED to false), emptyList()).toJson())
+  val noFeed = MiniJson.stringify(Policy(policy.surfaces + (Surface.FEED to false), emptyList(), 24).toJson())
   check("old grant id no longer valid", !e.applyPolicy(noFeed, """["a1"]""").ok)
   check("new grant still maturing", !e.applyPolicy(noFeed, """["a2"]""").ok)
 
@@ -234,12 +291,12 @@ fun enforcerTests() {
   // Corrupt stored state falls back to safe defaults.
   store.data = "{garbage"
   val fresh = Enforcer(store, clock)
-  check("corrupt state -> default policy blocks reels", fresh.currentPolicy().blocks(Surface.REELS))
+  check("corrupt state -> default policy (nothing hidden outside focus)", !fresh.currentPolicy().blocks(Surface.REELS))
 
   // Schedules: active window counts as focus; reboot with manual time fails closed.
   val c2 = FakeClock(1 * Limits.DAY + 8 * H + 59 * Limits.MINUTE, trusted = false) // Monday 08:59
   val e2 = Enforcer(MemStore(), c2)
-  val study = """{"surfaces":{"feed":true,"reels":true,"explore":true,"stories":false},"schedules":[{"id":"study","name":"Study","days":62,"startMin":540,"endMin":780}]}"""
+  val study = """{"surfaces":{"feed":true,"reels":true,"explore":true,"stories":false},"schedules":[{"id":"study","name":"Study","days":62,"startMin":540,"endMin":780}],"waitHours":24}"""
   check("add schedule", e2.applyPolicy(study, "[]").ok)
   check("not yet", !e2.focus().active)
   c2.advance(Limits.MINUTE)
@@ -255,7 +312,7 @@ fun enforcerTests() {
   check("e3 first policy", e3.applyPolicy(MiniJson.stringify(policy.toJson()), "[]").ok)
   check("e3 grant", e3.registerGrant("""{"id":"r1","kind":"surface-off","surface":"reels"}"""))
   c3.wall += 7 * Limits.DAY; c3.mono = 1_000; c3.boot = "b9"
-  val noReels = MiniJson.stringify(Policy(policy.surfaces + (Surface.REELS to false), emptyList()).toJson())
+  val noReels = MiniJson.stringify(Policy(policy.surfaces + (Surface.REELS to false), emptyList(), 24).toJson())
   check("clock jump + reboot does not mature grant", !e3.applyPolicy(noReels, """["r1"]""").ok)
   c3.advance(Limits.DAY)
   check("real 24 h matures grant", e3.applyPolicy(noReels, """["r1"]""").ok)
@@ -280,9 +337,28 @@ fun enforcerTests() {
   // Low: bad \u escape is a ParseException, and corrupt state never crashes load.
   check("bad unicode escape", try { MiniJson.parse("\"\\u+fff\""); false } catch (e: MiniJson.ParseException) { true })
   val st6 = MemStore(); st6.data = """{"v":2,"policy":{"surfaces":"x"},"grants":[{"waitedMs":"no"}]}"""
-  check("corrupt state loads safely", Enforcer(st6, c5).currentPolicy().blocks(Surface.REELS))
+  check("corrupt state loads safely", Enforcer(st6, c5).currentPolicy() == Policy.DEFAULT)
   val st7 = MemStore(); st7.data = "{garbage"
-  check("corrupt state does not skip the ratchet", !Enforcer(st7, c5).applyPolicy(noReels, "[]").ok)
+  val e7 = Enforcer(st7, c5)
+  // Corrupt state disables the first-policy shortcut: once hidden, un-hiding still needs a grant.
+  check("corrupt state: hiding accepted", e7.applyPolicy(MiniJson.stringify(policy.toJson()), "[]").ok)
+  check("corrupt state does not skip the ratchet", !e7.applyPolicy(noReels, "[]").ok)
+
+  // One-time migration from the "always hide" model (state v2) to focus-only (v3).
+  val c9 = FakeClock(6 * Limits.DAY + 12 * H)
+  val st9 = MemStore()
+  st9.data = """{"v":2,"policySet":true,"policy":{"surfaces":{"feed":true,"reels":true,"explore":true,"stories":false},""" +
+    """"schedules":[{"id":"study","name":"Study","days":62,"startMin":540,"endMin":780}]},""" +
+    """"grants":[{"id":"g1","kind":"surface-off","surface":"reels","waitedMs":0},{"id":"g2","kind":"schedule-delete","scheduleId":"study","waitedMs":0}],""" +
+    """"session":null,"windows":[],"clock":null,"blocks":3}"""
+  val e9 = Enforcer(st9, c9)
+  check("v2 migration: nothing hidden outside focus", Surface.values().none { e9.currentPolicy().blocks(it) })
+  check("v2 migration: schedules kept", e9.currentPolicy().schedules.map { it.id } == listOf("study"))
+  check("v2 migration: surface grants dropped, others kept", e9.grantsSnapshot().map { it.id } == listOf("g2"))
+  check("v2 migration: block count kept", e9.takeBlockCount() == 3)
+  check("v2 migration persisted as v3", st9.data!!.contains("\"v\":3"))
+  check("v2 migration: hiding again is accepted", e9.applyPolicy(MiniJson.stringify(Policy(policy.surfaces, e9.currentPolicy().schedules, 0).toJson()), "[]").ok)
+  check("v3 state is not migrated again", Enforcer(st9, c9).currentPolicy().blocks(Surface.REELS))
 
   // Only grants a change relied on are consumed.
   val c8 = FakeClock(6 * Limits.DAY + 12 * H)
@@ -290,7 +366,7 @@ fun enforcerTests() {
   check("e8 policy", e8.applyPolicy(MiniJson.stringify(policy.toJson()), "[]").ok)
   check("e8 grant", e8.registerGrant("""{"id":"k1","kind":"surface-off","surface":"feed"}"""))
   c8.mono += Limits.DAY
-  val withStories = MiniJson.stringify(Policy(policy.surfaces + (Surface.STORIES to true), emptyList()).toJson())
+  val withStories = MiniJson.stringify(Policy(policy.surfaces + (Surface.STORIES to true), emptyList(), 24).toJson())
   check("stricter change presenting a grant", e8.applyPolicy(withStories, """["k1"]""").ok)
   check("unused grant kept", e8.grantsSnapshot().any { it.id == "k1" })
 
@@ -322,6 +398,7 @@ fun runAll(): List<String> {
   ratchetVectors()
   classifierTests()
   enforcerTests()
+  waitTests()
   jsonTests()
   println("Kotlin core: $passed passed, ${failures.size} failed")
   failures.forEach { println("  FAIL $it") }

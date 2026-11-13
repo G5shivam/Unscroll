@@ -122,8 +122,11 @@ class Enforcer(private val store: StateStore, private val clock: ClockSource) {
       val next = incoming.schedules.firstOrNull { it.id == cur.id }
       next == null || !ScheduleRules.coversSuperset(cur, next)
     }.map { it.id }.toSet()
+    val waitLowered = incoming.waitHours < policy.waitHours
+    val before = policy
     grants = grants.filterNot { g ->
-      g.id in ids && PolicyRatchet.matured(g) && (g.surface in unblocked || g.scheduleId in loosened)
+      g.id in ids && PolicyRatchet.matured(g, before) &&
+        (g.surface in unblocked || g.scheduleId in loosened || (waitLowered && g.kind == GrantKind.WAIT_SHORTEN))
     }
     policy = incoming
     policySet = true
@@ -142,7 +145,8 @@ class Enforcer(private val store: StateStore, private val clock: ClockSource) {
       null
     } ?: return false
     val others = grants.filterNot {
-      it.id == g.id || (g.surface != null && it.surface == g.surface) || (g.scheduleId != null && it.scheduleId == g.scheduleId)
+      it.id == g.id || (g.surface != null && it.surface == g.surface) || (g.scheduleId != null && it.scheduleId == g.scheduleId) ||
+        (g.kind == GrantKind.WAIT_SHORTEN && it.kind == GrantKind.WAIT_SHORTEN)
     }
     if (others.size >= Limits.MAX_GRANTS) return false
     grants = others + g
@@ -195,7 +199,7 @@ class Enforcer(private val store: StateStore, private val clock: ClockSource) {
   private fun persist() {
     val json = MiniJson.stringify(
       mapOf(
-        "v" to 2,
+        "v" to STATE_VERSION,
         "policy" to policy.toJson(),
         "policySet" to policySet,
         "grants" to grants.map { it.toJson() },
@@ -224,19 +228,35 @@ class Enforcer(private val store: StateStore, private val clock: ClockSource) {
       null
     } ?: return
     policySet = true
+    var migrated = false
     try {
       val m = MiniJson.parse(raw).asMap() ?: return
-      if (m["v"].asIntOrNull() != 2) return
+      val v = m["v"].asIntOrNull()
+      if (v != 2 && v != STATE_VERSION) return
       Policy.fromJson(m["policy"])?.let {
         policy = it
         policySet = m["policySet"].asBoolOrNull() ?: true
       }
       grants = m["grants"].asList()?.mapNotNull { Grant.fromJson(it) }?.take(Limits.MAX_GRANTS) ?: emptyList()
+      if (v == 2) {
+        // One-time move to the focus-only model (mirrors migrateToFocusOnly in persist.ts):
+        // surfaces start un-hidden; focus still locks the whole app, so no running lock weakens.
+        policy = policy.copy(surfaces = Policy.DEFAULT.surfaces)
+        grants = grants.filter { it.kind != GrantKind.SURFACE_OFF }
+        migrated = true
+      }
       session = SessionState.fromJson(m["session"])
       windowLocks = m["windows"].asList()?.mapNotNull { SessionState.fromJson(it) }
         ?.filter { it.remainingMs > 0 }?.take(Limits.MAX_SCHEDULES)?.associateBy { it.id } ?: emptyMap()
       clockState = ClockState.fromJson(m["clock"])
       blockCount = m["blocks"].asIntOrNull()?.coerceIn(0, 100_000) ?: 0
+      // Toggles apply instantly: drop any waiting time an older build saved (mirrors withoutWait in persist.ts).
+      if (policy.waitHours != Limits.DEFAULT_WAIT_HOURS || grants.any { it.kind == GrantKind.WAIT_SHORTEN }) {
+        policy = policy.copy(waitHours = Limits.DEFAULT_WAIT_HOURS)
+        grants = grants.filter { it.kind != GrantKind.WAIT_SHORTEN }
+        migrated = true
+      }
+      if (migrated) persist()
     } catch (e: Exception) {
       policy = Policy.DEFAULT
       grants = emptyList()
@@ -247,6 +267,8 @@ class Enforcer(private val store: StateStore, private val clock: ClockSource) {
 
   companion object {
     private const val PERSIST_EVERY_MS = 15_000L
+    /** 2 = surfaces always hidden by default; 3 = focus-only model. */
+    private const val STATE_VERSION = 3
     private val ID = Regex("^[A-Za-z0-9_-]{1,64}$")
   }
 }

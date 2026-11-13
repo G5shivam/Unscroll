@@ -18,8 +18,20 @@ import { DAY, FakeClock, HOUR, MIN, at, testEnv } from './helpers';
 
 const study: Schedule = { id: 'study', name: 'Study', days: 0b0111110, startMin: 9 * 60, endMin: 13 * 60 };
 
-function ready(clock: FakeClock, state: AppState = initialState()): AppState {
+/** Onboarded, with "also hide outside focus" on for feed, Reels and Explore. */
+function ready(clock: FakeClock, state: AppState = withHidden(initialState())): AppState {
   return sync({ ...state, onboarded: true }, clock.sample(), testEnv).state;
+}
+
+/**
+ * Hiding on, and a 24 h wait. The app always runs with no wait (toggles are
+ * instant); these tests exercise the engine's waiting mechanism itself.
+ */
+function withHidden(state: AppState): AppState {
+  return {
+    ...state,
+    policy: { ...state.policy, surfaces: { feed: true, reels: true, explore: true, stories: false }, waitHours: 24 },
+  };
 }
 
 function must<T>(r: { ok: true; value: T } | { ok: false; error: string }): T {
@@ -268,5 +280,39 @@ describe('stats housekeeping', () => {
     const clock = new FakeClock(at(0, 12));
     const s = ready(clock);
     expect(applyDuePending(s, clock.wall, testEnv).applied).toEqual([]);
+  });
+});
+
+
+describe('the app\'s real configuration: no wait', () => {
+  const noWait = (clock: FakeClock) =>
+    ready(clock, { ...initialState(), policy: { ...withHidden(initialState()).policy, waitHours: 0 } });
+
+  test('outside focus, un-hiding and loosening a schedule apply on the next sync', () => {
+    const clock = new FakeClock(at(6, 12)); // Saturday noon, study (weekdays) not running
+    let s = must(addSchedule(noWait(clock), study));
+    s = must(setSurface(s, 'reels', false, clock.wall, testEnv)).state;
+    s = must(updateSchedule(s, { ...study, endMin: 11 * 60 }, clock.wall, testEnv)).state;
+    s = sync(s, clock.sample(), testEnv).state;
+    expect(s.policy.surfaces.reels).toBe(false);
+    expect(s.policy.schedules[0].endMin).toBe(11 * 60);
+    expect(s.pending).toHaveLength(0);
+  });
+
+  test('during focus, changes wait until the focus ends', () => {
+    const clock = new FakeClock(at(6, 12));
+    let s = must(startSession(noWait(clock), HOUR, clock.sample(), clock.wall, testEnv));
+    s = must(setSurface(s, 'reels', false, clock.wall, testEnv)).state;
+    s = sync(s, clock.sample(), testEnv).state;
+    expect(s.policy.surfaces.reels).toBe(true);
+    clock.advance(HOUR);
+    s = sync(s, clock.sample(), testEnv).state;
+    expect(s.policy.surfaces.reels).toBe(false);
+  });
+
+  test('a running schedule still cannot be shortened or removed', () => {
+    const clock = new FakeClock(at(2, 10)); // Tuesday 10:00, study running
+    const s = must(addSchedule(noWait(clock), study));
+    expect(deleteSchedule(s, 'study', clock.wall, testEnv)).toEqual({ ok: false, error: 'locked' });
   });
 });

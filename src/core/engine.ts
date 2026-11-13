@@ -1,7 +1,8 @@
 import { readTrustedTime } from './clock';
 import {
-  COOLING_OFF_MS,
   DAY,
+  DEFAULT_WAIT_HOURS,
+  HOUR,
   MAX_ESCAPES,
   MAX_PENDING,
   MAX_SCHEDULES,
@@ -37,17 +38,31 @@ export interface Env {
   newId(): string;
 }
 
+/**
+ * Nothing is hidden outside focus hours unless the user turns it on.
+ * During focus (a session or a schedule window) the whole app is locked.
+ */
 export const DEFAULT_POLICY: Policy = {
-  surfaces: { feed: true, reels: true, explore: true, stories: false },
+  surfaces: { feed: false, reels: false, explore: false, stories: false },
   schedules: [],
+  waitHours: DEFAULT_WAIT_HOURS,
 };
+
+/** The user's current waiting time for loosening changes, in ms. */
+export const waitMs = (state: AppState): number => state.policy.waitHours * HOUR;
+
+/** When a pending change is expected to apply: the wait still left, from now (display only). */
+export function pendingEta(state: AppState, p: PendingChange, now: number): number {
+  return now + Math.max(0, waitMs(state) - p.waitedMs);
+}
 
 export function initialState(): AppState {
   return {
     version: 1,
+    surfaceModel: 'focus-only',
     onboarded: false,
     consentAt: null,
-    policy: { surfaces: { ...DEFAULT_POLICY.surfaces }, schedules: [] },
+    policy: { surfaces: { ...DEFAULT_POLICY.surfaces }, schedules: [], waitHours: DEFAULT_WAIT_HOURS },
     pending: [],
     sessions: [],
     windowLocks: [],
@@ -286,7 +301,7 @@ export function setSurface(
 
 function queue(
   state: AppState,
-  change: Pick<PendingChange, 'kind' | 'surface' | 'scheduleId' | 'next'>,
+  change: Pick<PendingChange, 'kind' | 'surface' | 'scheduleId' | 'next' | 'waitHours'>,
   now: number,
   env: Env,
 ): Result<ChangeOutcome> {
@@ -294,7 +309,11 @@ function queue(
   // restarts the 24-hour wait from now, so a fresh (possibly looser) request
   // can never inherit an older request's head start.
   const sameTarget = (p: PendingChange) =>
-    change.surface !== undefined ? p.surface === change.surface : p.scheduleId === change.scheduleId;
+    change.kind === 'wait-shorten'
+      ? p.kind === 'wait-shorten'
+      : change.surface !== undefined
+        ? p.surface === change.surface
+        : p.scheduleId === change.scheduleId;
   const others = state.pending.filter((p) => !sameTarget(p));
   if (others.length >= MAX_PENDING) return fail('too-many');
   // Start counting from the monotonic reading behind `now` (exact on the same boot).
@@ -303,7 +322,7 @@ function queue(
     id: env.newId(),
     ...change,
     requestedAt: now,
-    effectiveAt: now + COOLING_OFF_MS,
+    effectiveAt: now + waitMs(state),
     waitedMs: 0,
     lastMono: c ? c.anchorMono + (now - c.anchorTrusted) : null,
     lastBootId: c ? c.bootId : null,
@@ -322,7 +341,9 @@ export function applyDuePending(
   env: Env,
 ): { state: AppState; applied: string[] } {
   if (focusStatus(state, now, env).active) return { state, applied: [] };
-  const due = state.pending.filter((p) => p.waitedMs >= COOLING_OFF_MS).sort((a, b) => a.requestedAt - b.requestedAt);
+  // Measured against the current wait, so raising the wait also delays changes already waiting.
+  const wait = waitMs(state);
+  const due = state.pending.filter((p) => p.waitedMs >= wait).sort((a, b) => a.requestedAt - b.requestedAt);
   if (due.length === 0) return { state, applied: [] };
 
   let policy = state.policy;
@@ -339,6 +360,8 @@ export function applyDuePending(
       const v = validateSchedule(p.next);
       if (!v.ok || !policy.schedules.some((s) => s.id === v.value.id)) continue;
       policy = { ...policy, schedules: policy.schedules.map((s) => (s.id === v.value.id ? v.value : s)) };
+    } else if (p.kind === 'wait-shorten' && p.waitHours !== undefined && p.waitHours < policy.waitHours) {
+      policy = { ...policy, waitHours: p.waitHours };
     } else continue;
     applied.push(p.id);
   }
@@ -409,5 +432,6 @@ export function nativePolicy(state: AppState): Policy {
   return {
     surfaces: { ...state.policy.surfaces },
     schedules: state.policy.schedules.map((s: Schedule) => ({ ...s })),
+    waitHours: state.policy.waitHours,
   };
 }

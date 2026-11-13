@@ -57,6 +57,7 @@ describe('ratchet vectors', () => {
   test.each(ratchetVectors.cases)('$name', (c) => {
     const incoming: Policy = JSON.parse(JSON.stringify(current));
     const cc = c as Record<string, unknown>;
+    if (cc.setWait !== undefined) incoming.waitHours = cc.setWait as number;
     if (cc.patch) Object.assign(incoming.surfaces, (cc.patch as { surfaces: object }).surfaces);
     if (cc.addSchedule) incoming.schedules.push(cc.addSchedule as Schedule);
     if (cc.removeSchedule) incoming.schedules = incoming.schedules.filter((s) => s.id !== cc.removeSchedule);

@@ -46,7 +46,7 @@ export async function run(log = console.log) {
       await page.goto(srv.url);
       await id('onboarding-welcome').waitFor();
       const text = await page.innerText('body');
-      for (const s of ['Feed and Reels stay hidden', 'can’t be cancelled', 'Leaving takes a deliberate step']) {
+      for (const s of ['Locked only when you choose', 'can’t be cancelled', 'Leaving takes a deliberate step']) {
         assert.ok(text.includes(s), s);
       }
       await shot('01-welcome');
@@ -73,16 +73,20 @@ export async function run(log = console.log) {
       await id('permissions-continue').click();
     });
 
-    await step('choose what to hide and finish', async () => {
+    await step('nothing is hidden outside focus unless the user opts in', async () => {
       await id('onboarding-defaults').waitFor();
-      assert.equal(await id('default-reels').getAttribute('aria-checked'), 'true');
-      assert.equal(await id('default-stories').getAttribute('aria-checked'), 'false');
+      assert.match(await page.innerText('body'), /Also hide outside focus hours\?/);
+      for (const s of ['feed', 'reels', 'explore', 'stories']) {
+        assert.equal(await id(`default-${s}`).getAttribute('aria-checked'), 'false', s);
+      }
+      // This user opts in to hiding Reels and Stories outside focus too.
+      await id('default-reels').click();
       await id('default-stories').click();
       await shot('04-defaults');
       await id('finish-setup').click();
       await id('screen-today').waitFor();
       await id('lock-panel-open').waitFor();
-      assert.match(await id('lock-panel-open').innerText(), /Feed, Reels, Explore and Stories hidden/);
+      assert.match(await id('lock-panel-open').innerText(), /Reels and Stories hidden/);
       await shot('05-today-open');
     });
 
@@ -97,8 +101,22 @@ export async function run(log = console.log) {
       assert.equal(await id('duration-value').innerText(), '25 min');
       // 25 - 15 would go under the 15-minute minimum.
       assert.equal(await id('duration-minus').getAttribute('aria-disabled'), 'true');
-      await id('preset-60').click();
       await shot('06-focus-sheet');
+    });
+
+    await step('focus length can also be typed exactly', async () => {
+      await id('duration-edit').click();
+      await id('duration-hours').fill('0');
+      await id('duration-minutes').fill('10');
+      assert.match(await id('duration-error').innerText(), /15 min and 12 h/);
+      assert.equal(await id('hold-to-lock').getAttribute('aria-disabled'), 'true');
+      await id('duration-hours').fill('1');
+      await id('duration-minutes').fill('7');
+      await shot('06b-focus-typed');
+      await id('duration-done').click();
+      assert.equal(await id('duration-value').innerText(), '1 h 7 min');
+      await id('preset-60').click();
+      assert.equal(await id('duration-value').innerText(), '1 h');
     });
 
     await step('a short tap does not start a lock; a full hold does', async () => {
@@ -144,40 +162,55 @@ export async function run(log = console.log) {
       await id('day-6').click(); // add Saturday
       await id('end-plus').click(); // 1:15 pm
       assert.equal(await id('end-value').innerText(), '1:15 pm');
+      // Or type an exact time.
+      await id('end-edit').click();
+      await id('end-minute').fill('99');
+      assert.ok(await id('end-error').isVisible());
+      assert.equal(await id('save-schedule').getAttribute('aria-disabled'), 'true');
+      await id('end-hour').fill('1');
+      await id('end-minute').fill('20');
       await shot('10-schedule-editor');
+      await id('end-done').click();
+      assert.equal(await id('end-value').innerText(), '1:20 pm');
       await id('save-schedule').click();
       await id('screen-schedules').waitFor();
       assert.match(await page.innerText('body'), /Board exam prep/);
       await shot('11-schedules-list');
     });
 
-    await step('showing Reels again waits 24 hours and can be cancelled', async () => {
+    await step('during focus, showing Reels again waits for the focus to end', async () => {
       await id('tab-settings').click();
       await id('screen-settings').waitFor();
+      assert.doesNotMatch(await page.innerText('body'), /waiting time|24 hours/i);
       await id('surface-reels').click();
       await id('settings-message').waitFor();
-      assert.match(await id('settings-message').innerText(), /24 hours/);
+      assert.match(await id('settings-message').innerText(), /when this focus ends/);
       assert.match(await page.innerText('body'), /Show Reels again/);
       await shot('12-settings-pending');
     });
 
-    await step('nothing loosens before 24 hours, even after the focus ends', async () => {
+    await step('when the focus ends, the change applies by itself', async () => {
       await e2e('advance', 2 * HOUR);
       await settle();
       await id('tab-today').click();
       await id('lock-panel-open').waitFor();
-      assert.match(await id('lock-panel-open').innerText(), /Reels/); // Reels still hidden
+      assert.doesNotMatch(await id('lock-panel-open').innerText(), /Reels/); // Reels showing again
       assert.equal(await id('stat-streak').innerText(), '1 day');
       await shot('13-today-after-focus');
     });
 
-    await step('after 24 hours the change applies', async () => {
-      await e2e('advance', 23 * HOUR);
-      await settle();
+    await step('outside focus, hiding and showing apply instantly, both ways', async () => {
       await id('tab-settings').click();
       await id('screen-settings').waitFor();
       assert.equal(await id('surface-reels').getAttribute('aria-checked'), 'false');
       assert.doesNotMatch(await page.innerText('body'), /Show Reels again/);
+      await id('surface-reels').click();
+      assert.equal(await id('surface-reels').getAttribute('aria-checked'), 'true');
+      await id('surface-reels').click();
+      await page.waitForFunction(() => document.querySelector('[data-testid="surface-reels"]')?.getAttribute('aria-checked') === 'false');
+      assert.equal(await id('settings-message').count(), 0);
+      assert.doesNotMatch(await page.innerText('body'), /Show Reels again/);
+      await shot('14-settings-instant');
     });
 
     await step('blocked attempts from the enforcer show on Today', async () => {

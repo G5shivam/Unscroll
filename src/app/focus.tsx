@@ -6,6 +6,7 @@ import { t } from '../i18n';
 import { useController, useUnscroll } from '../state/provider';
 import { formatClock, formatDuration } from '../ui/format';
 import { HoldButton } from '../ui/HoldButton';
+import { DurationField } from '../ui/TimeFields';
 import { Chip, Icon, Notice, Screen } from '../ui/primitives';
 import { Text } from '../ui/Text';
 import { color, radius, space } from '../ui/theme';
@@ -21,7 +22,8 @@ export default function StartFocus() {
   const minimum = extending ? Math.min(MAX_SESSION_MS, Math.ceil((remaining + MINUTE) / STEP) * STEP) : MIN_SESSION_MS;
   const [duration, setDuration] = useState(() => Math.max(minimum, HOUR));
   const [error, setError] = useState<string | null>(null);
-  const valid = duration >= minimum && duration <= MAX_SESSION_MS;
+  const [typingBad, setTypingBad] = useState(false);
+  const valid = !typingBad && duration >= minimum && duration <= MAX_SESSION_MS;
 
   const lock = async () => {
     setError(null);
@@ -79,9 +81,14 @@ export default function StartFocus() {
           testID="duration-minus"
         />
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text variant="title" testID="duration-value">
-            {formatDuration(duration)}
-          </Text>
+          <DurationField
+            value={duration}
+            onChange={setDuration}
+            min={minimum}
+            max={MAX_SESSION_MS}
+            testID="duration"
+            onInvalid={setTypingBad}
+          />
           <Text tone="slate" variant="caption" testID="ends-at">
             {now ? t('ends_at', { time: formatClock(now + duration) }) : ' '}
           </Text>

@@ -1,5 +1,6 @@
 import { COOLING_OFF_MS } from '../src/core/constants';
-import { initialState } from '../src/core/engine';
+import { applyDuePending, initialState } from '../src/core/engine';
+import { realEnv as testEnv } from '../src/core/env';
 import { parseState, serializeState } from '../src/state/persist';
 
 describe('persisted state parsing', () => {
@@ -27,18 +28,58 @@ describe('persisted state parsing', () => {
       const s = parseState(raw as string | null);
       expect(s.version).toBe(1);
       expect(s.onboarded).toBe(false);
-      expect(s.policy.surfaces.reels).toBe(true);
+      expect(s.policy.surfaces).toEqual({ feed: false, reels: false, explore: false, stories: false });
     },
   );
 
-  test('a tampered pending change can never take effect before 24 hours', () => {
-    const raw = JSON.stringify({
+  test('states saved before the focus-only model are migrated once: nothing hidden outside focus', () => {
+    const old = {
       ...initialState(),
-      pending: [{ id: 'p', kind: 'surface-off', surface: 'feed', requestedAt: 5_000, effectiveAt: 0 }],
-    });
-    expect(parseState(raw).pending[0].effectiveAt).toBe(5_000 + COOLING_OFF_MS);
+      onboarded: true,
+      policy: {
+        surfaces: { feed: true, reels: true, explore: true, stories: true },
+        schedules: [{ id: 'study', name: 'Study', days: 62, startMin: 540, endMin: 780 }],
+      },
+      pending: [
+        { id: 'p1', kind: 'surface-off', surface: 'reels', requestedAt: 1, effectiveAt: 1 + COOLING_OFF_MS, waitedMs: 0, lastMono: null, lastBootId: null },
+        { id: 'p2', kind: 'schedule-delete', scheduleId: 'study', requestedAt: 1, effectiveAt: 1 + COOLING_OFF_MS, waitedMs: 0, lastMono: null, lastBootId: null },
+      ],
+      streak: { current: 4, best: 9, lastDay: '2026-11-10' },
+    } as Record<string, unknown>;
+    delete old.surfaceModel;
+    const s = parseState(JSON.stringify(old));
+    expect(s.surfaceModel).toBe('focus-only');
+    expect(s.policy.surfaces).toEqual({ feed: false, reels: false, explore: false, stories: false });
+    // Focus hours, other pending changes and progress are untouched.
+    expect(s.policy.schedules).toHaveLength(1);
+    expect(s.pending.map((p) => p.id)).toEqual(['p2']);
+    expect(s.streak.best).toBe(9);
   });
 
+  test('after migration, a user who turns hiding back on keeps it', () => {
+    const s = { ...initialState(), policy: { surfaces: { feed: true, reels: true, explore: false, stories: false }, schedules: [], waitHours: 24 } };
+    expect(parseState(serializeState(s)).policy.surfaces.reels).toBe(true);
+  });
+
+  test('a saved waiting time from an older build is dropped: toggles are instant', () => {
+    const raw = JSON.stringify({
+      ...initialState(),
+      policy: { surfaces: { feed: true, reels: false, explore: false, stories: false }, schedules: [], waitHours: 24 },
+      pending: [
+        { id: 'p', kind: 'surface-off', surface: 'feed', requestedAt: 5_000, effectiveAt: 0, waitedMs: 0 },
+        { id: 'w', kind: 'wait-shorten', waitHours: 1, requestedAt: 5_000, effectiveAt: 0, waitedMs: 0 },
+      ],
+    });
+    const s = parseState(raw);
+    expect(s.policy.waitHours).toBe(0);
+    expect(s.pending.map((p) => p.id)).toEqual(['p']);
+    // The change that was waiting is now due (outside focus).
+    expect(applyDuePending(s, 10_000, testEnv).applied).toEqual(['p']);
+  });
+  test('policies saved before waitHours existed load with no wait', () => {
+    const old = { ...initialState(), policy: { surfaces: initialState().policy.surfaces, schedules: [] } };
+    expect(parseState(JSON.stringify(old)).policy.waitHours).toBe(0);
+  });
   test('invalid schedules, pending changes, sessions and stats are dropped', () => {
     const raw = JSON.stringify({
       ...initialState(),

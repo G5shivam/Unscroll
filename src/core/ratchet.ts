@@ -1,4 +1,4 @@
-import { COOLING_OFF_MS, MAX_SCHEDULES } from './constants';
+import { HOUR, MAX_SCHEDULES, MAX_WAIT_HOURS } from './constants';
 import { coversSuperset, validateSchedule } from './schedule';
 import { SURFACES, type PendingKind, type Policy, type Surface } from './types';
 
@@ -11,15 +11,21 @@ export interface LooseningGrant {
   kind: PendingKind;
   surface?: Surface;
   scheduleId?: string;
+  /** wait-shorten: the lowest waiting time this grant allows. */
+  waitHours?: number;
   /** Real time waited since the request (monotonic, see tickWait). */
   waitedMs: number;
 }
 
 export type RatchetDecision = { ok: true } | { ok: false; reason: string };
 
-function matured(g: LooseningGrant): boolean {
-  return Number.isFinite(g.waitedMs) && g.waitedMs >= COOLING_OFF_MS;
+/** A grant has matured once it waited the CURRENT waiting time (raising the wait delays it too). */
+export function grantMatured(g: LooseningGrant, current: Policy): boolean {
+  return Number.isFinite(g.waitedMs) && g.waitedMs >= current.waitHours * HOUR;
 }
+
+export const isWaitHours = (v: unknown): v is number =>
+  Number.isInteger(v) && (v as number) >= 0 && (v as number) <= MAX_WAIT_HOURS;
 
 /**
  * The lock ratchet: decides whether `incoming` may replace `current`.
@@ -48,7 +54,14 @@ export function checkPolicyChange(
   }
 
   const granted = (pred: (g: LooseningGrant) => boolean) =>
-    grants.some((g) => pred(g) && matured(g));
+    grants.some((g) => pred(g) && grantMatured(g, current));
+
+  if (incoming.waitHours < current.waitHours) {
+    if (focusActive) return { ok: false, reason: 'focus active: cannot shorten the wait' };
+    if (!granted((g) => g.kind === 'wait-shorten' && isWaitHours(g.waitHours) && incoming.waitHours >= g.waitHours)) {
+      return { ok: false, reason: 'no matured grant to shorten the wait' };
+    }
+  }
 
   for (const surface of SURFACES) {
     if (current.surfaces[surface] && !incoming.surfaces[surface]) {
@@ -77,5 +90,5 @@ export function isPolicyShape(p: unknown): p is Policy {
   if (typeof o.surfaces !== 'object' || o.surfaces === null) return false;
   const s = o.surfaces as Record<string, unknown>;
   for (const k of SURFACES) if (typeof s[k] !== 'boolean') return false;
-  return Array.isArray(o.schedules);
+  return Array.isArray(o.schedules) && isWaitHours(o.waitHours);
 }

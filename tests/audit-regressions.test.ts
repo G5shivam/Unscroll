@@ -9,6 +9,9 @@ import { SimulatedBlocker } from '../src/native/simulated';
 import { UnscrollController } from '../src/state/controller';
 import { DAY, FakeClock, HOUR, MIN, at, testEnv } from './helpers';
 
+/** The user turned on "also hide outside focus" (off by default since the focus-only model). */
+const HIDE_OUTSIDE_FOCUS = { feed: true, reels: true, explore: true, stories: false };
+
 const study: Schedule = { id: 'study', name: 'Study', days: 0b0111110, startMin: 9 * 60, endMin: 13 * 60 };
 
 function must<T>(r: { ok: true; value: T } | { ok: false; error: string }): T {
@@ -19,7 +22,11 @@ function must<T>(r: { ok: true; value: T } | { ok: false; error: string }): T {
 describe('H1: moving the clock forward and rebooting does not skip the 24 h wait', () => {
   test('pending loosening only matures on real elapsed time', () => {
     const clock = new FakeClock(at(6, 12));
-    let s: AppState = sync({ ...initialState(), onboarded: true }, clock.sample(), testEnv).state;
+    let s: AppState = sync(
+      { ...initialState(), onboarded: true, policy: { surfaces: { ...HIDE_OUTSIDE_FOCUS }, schedules: [], waitHours: 24 } },
+      clock.sample(),
+      testEnv,
+    ).state;
     s = must(setSurface(s, 'reels', false, clock.wall, testEnv)).state;
 
     // Attack: set the date a week ahead, then reboot with a "trusted" wall clock.
@@ -76,39 +83,36 @@ describe('H2: clock or time-zone changes cannot end a running schedule window', 
 });
 
 describe('H3: app and enforcer cannot drift apart', () => {
-  test('a refused push is retried until the enforcer’s own wait has matured', async () => {
+  test('a refused push is retried until the enforcer accepts it', async () => {
     const clock = new FakeClock(at(6, 12));
     const blocker = new SimulatedBlocker(
       () => clock.wall,
       () => clock.mono,
     );
-    const mem = new Map<string, string>();
-    const ctrl = new UnscrollController(
-      blocker,
-      { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => void mem.set(k, v) },
-      testEnv,
-    );
+    const ctrl = new UnscrollController(blocker, { getItem: async () => null, setItem: async () => {} }, testEnv);
     await ctrl.init();
     await blocker.requestPermission();
+    await ctrl.setInitialSurfaces(HIDE_OUTSIDE_FOCUS);
     await ctrl.completeOnboarding();
+
+    const real = blocker.applyPolicy.bind(blocker);
+    let refuse = true;
+    blocker.applyPolicy = async (p, g) => (refuse ? { accepted: false, reason: 'busy' } : real(p, g));
     await ctrl.setSurface('reels', false);
-
-    // The enforcer registered its grant 2 s after the app queued the change.
-    blocker.grants = blocker.grants.map((g) => ({ ...g, registeredMono: g.registeredMono + 2000 }));
-    clock.advance(COOLING_OFF_MS);
-    await ctrl.tick();
     expect(ctrl.getSnapshot().state.policy.surfaces.reels).toBe(false); // app applied
-    expect(blocker.policy?.surfaces.reels).toBe(true); // enforcer refused (2 s short)
+    expect(blocker.policy?.surfaces.reels).toBe(true); // enforcer refused
+    expect(ctrl.getSnapshot().enforcerSynced).toBe(false);
 
-    clock.advance(3000);
+    refuse = false;
+    clock.advance(1000);
     await ctrl.tick();
     expect(blocker.policy?.surfaces.reels).toBe(false); // retried and accepted
+    expect(ctrl.getSnapshot().enforcerSynced).toBe(true);
 
     // Later stricter changes reach the enforcer again.
     await ctrl.setSurface('stories', true);
     expect(blocker.policy?.surfaces.stories).toBe(true);
   });
-
   test('a stricter change withdraws the matching native grant', async () => {
     const clock = new FakeClock(at(6, 12));
     const blocker = new SimulatedBlocker(
@@ -117,13 +121,14 @@ describe('H3: app and enforcer cannot drift apart', () => {
     );
     const ctrl = new UnscrollController(blocker, { getItem: async () => null, setItem: async () => {} }, testEnv);
     await ctrl.init();
+    await ctrl.setInitialSurfaces(HIDE_OUTSIDE_FOCUS);
     await ctrl.completeOnboarding();
+    await ctrl.startFocus(HOUR); // during focus, un-hiding waits for the focus to end
     await ctrl.setSurface('feed', false);
     expect(blocker.grants).toHaveLength(1);
     await ctrl.setSurface('feed', true);
     expect(blocker.grants).toHaveLength(0);
   });
-
   test('page messages from Clean Instagram are rate-limited', async () => {
     const clock = new FakeClock(at(6, 12));
     const blocker = new SimulatedBlocker(
@@ -150,6 +155,7 @@ describe('review: refused grant registration', () => {
     };
     const ctrl = new UnscrollController(blocker, { getItem: async () => null, setItem: async () => {} }, testEnv);
     await ctrl.init();
+    await ctrl.setInitialSurfaces(HIDE_OUTSIDE_FOCUS);
     await ctrl.completeOnboarding();
     expect(await ctrl.setSurface('reels', false)).toEqual({ ok: false, error: 'enforcer-refused' });
     expect(ctrl.getSnapshot().state.pending).toHaveLength(0);

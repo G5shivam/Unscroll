@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { ALL_DAYS, MAX_SCHEDULES, MAX_SCHEDULE_NAME, MINUTES_PER_DAY, WEEKDAYS } from '../../core/constants';
+import { ALL_DAYS, MAX_SCHEDULES, MAX_SCHEDULE_NAME, WEEKDAYS } from '../../core/constants';
 import { scheduleFromTemplate, templateByKey, TEMPLATES } from '../../core/templates';
 import { newId, realEnv } from '../../core/env';
 import { minutesUntilEnd, validateSchedule, windowLength } from '../../core/schedule';
@@ -10,12 +10,11 @@ import { useController, useUnscroll } from '../../state/provider';
 import { Button } from '../../ui/Button';
 import { t } from '../../i18n';
 import { templateName, templateWhy, validationText } from '../../ui/copy';
-import { dayLetters, dayNames, formatDuration, formatMinuteOfDay, formatUntil } from '../../ui/format';
+import { dayLetters, dayNames, formatDuration } from '../../ui/format';
 import { Chip, Icon, Notice, Screen } from '../../ui/primitives';
+import { TimeField } from '../../ui/TimeFields';
 import { Text } from '../../ui/Text';
 import { color, font, radius, space } from '../../ui/theme';
-
-const STEP = 15;
 
 export default function ScheduleEditor() {
   const { id, template } = useLocalSearchParams<{ id: string; template?: string }>();
@@ -35,6 +34,9 @@ export default function ScheduleEditor() {
   const [draft, setDraft] = useState<Schedule>(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [startBad, setStartBad] = useState(false);
+  const [endBad, setEndBad] = useState(false);
+  const typingBad = startBad || endBad;
 
   const running = !isNew && existing ? minutesUntilEnd(existing, realEnv.toLocal(now)) >= 0 : false;
   const pending = existing ? state.pending.find((p) => p.scheduleId === existing.id) : undefined;
@@ -42,6 +44,7 @@ export default function ScheduleEditor() {
 
   const save = async () => {
     setError(null);
+    if (typingBad) return;
     if (!validation.ok) return setError(validationText(validation.code));
     setBusy(true);
     const r = isNew ? await ctrl.addSchedule(draft) : await ctrl.updateSchedule(draft);
@@ -80,7 +83,7 @@ export default function ScheduleEditor() {
           label={isNew ? t('add_schedule') : t('save_changes')}
           onPress={save}
           busy={busy}
-          disabled={!validation.ok}
+          disabled={!validation.ok || typingBad}
           testID="save-schedule"
         />
       }
@@ -111,7 +114,7 @@ export default function ScheduleEditor() {
             tone="pending"
             icon="clock"
             title={pending.kind === 'schedule-delete' ? t('pending_removal_title') : t('pending_change_title')}
-            body={t('pending_body', { when: formatUntil(pending.effectiveAt, now) })}
+            body={t('pending_body')}
           />
         </View>
       ) : null}
@@ -197,9 +200,9 @@ export default function ScheduleEditor() {
         {t('hours')}
       </Text>
       <View style={styles.timeGroup}>
-        <TimeRow label={t('starts')} value={draft.startMin} onChange={(startMin) => setDraft((s) => ({ ...s, startMin }))} testID="start" />
+        <TimeRow label={t('starts')} value={draft.startMin} onChange={(startMin) => setDraft((s) => ({ ...s, startMin }))} testID="start" onInvalid={setStartBad} />
         <View style={styles.hair} />
-        <TimeRow label={t('ends')} value={draft.endMin} onChange={(endMin) => setDraft((s) => ({ ...s, endMin }))} testID="end" />
+        <TimeRow label={t('ends')} value={draft.endMin} onChange={(endMin) => setDraft((s) => ({ ...s, endMin }))} testID="end" onInvalid={setEndBad} />
       </View>
       <Text variant="caption" tone="slate" style={{ marginTop: space.sm, marginLeft: space.xs }} testID="schedule-summary">
         {validation.ok
@@ -237,39 +240,20 @@ function TimeRow({
   value,
   onChange,
   testID,
+  onInvalid,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   testID: string;
+  onInvalid: (bad: boolean) => void;
 }) {
-  const shift = (delta: number) => onChange((value + delta + MINUTES_PER_DAY) % MINUTES_PER_DAY);
   return (
     <View style={styles.timeRow}>
       <Text variant="bodyStrong" style={{ width: 64 }}>
         {label}
       </Text>
-      <Pressable
-        testID={`${testID}-minus`}
-        accessibilityRole="button"
-        accessibilityLabel={t('earlier', { label })}
-        onPress={() => shift(-STEP)}
-        style={styles.timeBtn}
-      >
-        <Icon name="chevron-left" />
-      </Pressable>
-      <Text style={styles.timeValue} testID={`${testID}-value`} accessibilityLabel={`${label} ${formatMinuteOfDay(value)}`}>
-        {formatMinuteOfDay(value)}
-      </Text>
-      <Pressable
-        testID={`${testID}-plus`}
-        accessibilityRole="button"
-        accessibilityLabel={t('later', { label })}
-        onPress={() => shift(STEP)}
-        style={styles.timeBtn}
-      >
-        <Icon name="chevron-right" />
-      </Pressable>
+      <TimeField label={label} value={value} onChange={onChange} testID={testID} onInvalid={onInvalid} />
     </View>
   );
 }
@@ -300,14 +284,5 @@ const styles = StyleSheet.create({
   dayOn: { backgroundColor: color.ink, borderColor: color.ink },
   timeGroup: { backgroundColor: color.surface, borderRadius: radius.group, paddingHorizontal: space.lg },
   hair: { height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
-  timeRow: { flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: space.sm },
-  timeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.mist,
-  },
-  timeValue: { flex: 1, textAlign: 'center', fontFamily: font.displaySemi, fontSize: 22, color: color.ink },
+  timeRow: { flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: space.sm, paddingVertical: space.xs },
 });

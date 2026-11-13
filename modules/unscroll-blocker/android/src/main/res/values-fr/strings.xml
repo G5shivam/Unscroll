@@ -1,5 +1,5 @@
 <resources>
-  <string name="unscroll_service_summary">Masque le fil et les Reels d’Instagram, et verrouille Instagram pendant la concentration.</string>
+  <string name="unscroll_service_summary">Verrouille Instagram pendant vos heures de concentration. Peut aussi masquer le fil et les Reels, si vous le choisissez.</string>
   <string name="unscroll_service_description">Unscroll lit l’écran uniquement dans Instagram, les navigateurs et les réglages qui pourraient désactiver Unscroll. Il s’en sert pour masquer le fil, les Reels et Explorer, et pour verrouiller Instagram pendant vos heures de concentration. Le contenu de l’écran est vérifié sur votre téléphone puis effacé aussitôt. Rien n’est enregistré ni envoyé.</string>
   <string name="unscroll_overlay_locked_title">Instagram est verrouillé</string>
   <string name="unscroll_overlay_locked_body">Votre session se termine dans %1$s. Unscroll n’a pas de bouton stop.</string>

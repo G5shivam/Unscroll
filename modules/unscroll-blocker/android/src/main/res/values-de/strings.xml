@@ -1,5 +1,5 @@
 <resources>
-  <string name="unscroll_service_summary">Blendet Instagrams Feed und Reels aus und sperrt Instagram während des Fokus.</string>
+  <string name="unscroll_service_summary">Sperrt Instagram in deinen Fokuszeiten. Kann auf Wunsch auch Feed und Reels ausblenden.</string>
   <string name="unscroll_service_description">Unscroll liest den Bildschirm nur in Instagram, Webbrowsern und den Einstellungen, die Unscroll ausschalten könnten. Damit werden Feed, Reels und Entdecken ausgeblendet und Instagram während deiner Fokuszeiten gesperrt. Bildschirminhalte werden auf deinem Handy geprüft und sofort verworfen. Nichts wird gespeichert oder gesendet.</string>
   <string name="unscroll_overlay_locked_title">Instagram ist gesperrt</string>
   <string name="unscroll_overlay_locked_body">Dein Fokus endet in %1$s. Unscroll hat keinen Stopp-Knopf.</string>

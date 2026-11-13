@@ -1,5 +1,6 @@
-import { initialState } from '../core/engine';
-import { isPolicyShape } from '../core/ratchet';
+import { DEFAULT_POLICY, initialState } from '../core/engine';
+import { DEFAULT_WAIT_HOURS } from '../core/constants';
+import { isPolicyShape, isWaitHours } from '../core/ratchet';
 import { validateSchedule } from '../core/schedule';
 import type { AppState, PendingChange, Session } from '../core/types';
 
@@ -38,9 +39,11 @@ function parsePending(v: unknown): PendingChange | null {
   if (typeof v !== 'object' || v === null) return null;
   const p = v as Record<string, unknown>;
   if (!isStr(p.id) || !isNum(p.requestedAt) || !isNum(p.effectiveAt)) return null;
-  if (p.kind !== 'surface-off' && p.kind !== 'schedule-delete' && p.kind !== 'schedule-edit') return null;
-  // Never trust a stored effectiveAt that is earlier than the cooling-off rule allows.
-  const effectiveAt = Math.max(p.effectiveAt, p.requestedAt + 24 * 3_600_000);
+  if (p.kind !== 'surface-off' && p.kind !== 'schedule-delete' && p.kind !== 'schedule-edit' && p.kind !== 'wait-shorten') {
+    return null;
+  }
+  // effectiveAt is display only: maturity is decided by waitedMs against the current wait.
+  const effectiveAt = Math.max(p.effectiveAt, p.requestedAt);
   const waitedMs = isNum(p.waitedMs) && p.waitedMs >= 0 ? Math.min(p.waitedMs, 365 * 24 * 3_600_000) : 0;
   const out: PendingChange = {
     id: p.id,
@@ -51,7 +54,10 @@ function parsePending(v: unknown): PendingChange | null {
     lastMono: isNum(p.lastMono) ? p.lastMono : null,
     lastBootId: isStr(p.lastBootId, 128) ? p.lastBootId : null,
   };
-  if (p.kind === 'surface-off') {
+  if (p.kind === 'wait-shorten') {
+    if (!isWaitHours(p.waitHours)) return null;
+    out.waitHours = p.waitHours;
+  } else if (p.kind === 'surface-off') {
     if (!['feed', 'reels', 'explore', 'stories'].includes(p.surface as string)) return null;
     out.surface = p.surface as PendingChange['surface'];
   } else {
@@ -86,12 +92,17 @@ export function parseState(raw: string | null): AppState {
   const state: AppState = { ...base };
   state.onboarded = d.onboarded === true;
   state.consentAt = isNum(d.consentAt) ? d.consentAt : null;
-  if (isPolicyShape(d.policy)) {
-    const schedules = d.policy.schedules
+  // Policies saved before the waiting time was a setting get the 24 h default.
+  const rawPolicy =
+    typeof d.policy === 'object' && d.policy !== null
+      ? { waitHours: DEFAULT_WAIT_HOURS, ...(d.policy as Record<string, unknown>) }
+      : d.policy;
+  if (isPolicyShape(rawPolicy)) {
+    const schedules = rawPolicy.schedules
       .map((s) => validateSchedule(s))
       .flatMap((r) => (r.ok ? [r.value] : []))
       .slice(0, 20);
-    state.policy = { surfaces: { ...d.policy.surfaces }, schedules };
+    state.policy = { surfaces: { ...rawPolicy.surfaces }, schedules, waitHours: rawPolicy.waitHours };
   }
   state.pending = Array.isArray(d.pending)
     ? d.pending.map(parsePending).filter((x): x is PendingChange => x !== null)
@@ -128,7 +139,35 @@ export function parseState(raw: string | null): AppState {
     lastDay: typeof sk.lastDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sk.lastDay) ? sk.lastDay : null,
   };
   state.enforcementArmed = d.enforcementArmed === true;
-  return state;
+  const model = d.surfaceModel === 'focus-only' ? state : migrateToFocusOnly(state);
+  return withoutWait(model);
+}
+
+/**
+ * Toggles apply instantly: any saved waiting time (older builds used 24 h) is
+ * dropped. Changes that were waiting become due and apply on the next tick.
+ */
+export function withoutWait(state: AppState): AppState {
+  return {
+    ...state,
+    policy: { ...state.policy, waitHours: DEFAULT_WAIT_HOURS },
+    pending: state.pending.filter((p) => p.kind !== 'wait-shorten'),
+  };
+}
+
+/**
+ * One-time move from "feed and Reels always hidden" to "hidden only during
+ * focus unless turned on". Applied immediately (product decision): it never
+ * weakens a running lock, because focus locks the whole app regardless of
+ * these switches. Pending "show again" requests become moot and are dropped.
+ */
+export function migrateToFocusOnly(state: AppState): AppState {
+  return {
+    ...state,
+    surfaceModel: 'focus-only',
+    policy: { ...state.policy, surfaces: { ...DEFAULT_POLICY.surfaces } },
+    pending: state.pending.filter((p) => p.kind !== 'surface-off'),
+  };
 }
 
 export function serializeState(state: AppState): string {

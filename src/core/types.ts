@@ -33,6 +33,11 @@ export interface Schedule {
 export interface Policy {
   surfaces: SurfaceSettings;
   schedules: Schedule[];
+  /**
+   * How long any loosening waits, chosen by the user (0–168). Raising it is
+   * instant; lowering it is itself a loosening and waits the current value.
+   */
+  waitHours: number;
 }
 
 /** One clock reading from the platform. */
@@ -74,7 +79,7 @@ export interface Session {
   completed: boolean;
 }
 
-export type PendingKind = 'surface-off' | 'schedule-delete' | 'schedule-edit';
+export type PendingKind = 'surface-off' | 'schedule-delete' | 'schedule-edit' | 'wait-shorten';
 
 /** A loosening change waiting out the 24-hour cooling-off period. */
 export interface PendingChange {
@@ -83,6 +88,8 @@ export interface PendingChange {
   surface?: Surface;
   scheduleId?: string;
   next?: Schedule;
+  /** wait-shorten: the new, lower waiting time. */
+  waitHours?: number;
   /** Trusted wall time of the request (display only). */
   requestedAt: number;
   /** Expected time it takes effect (display only). */
@@ -118,8 +125,15 @@ export interface Stats {
   focusMinutes: Record<string, number>;
 }
 
+/**
+ * 'focus-only': surfaces are hidden outside focus only if the user turns them on.
+ * States saved before this model existed are migrated once on load (persist.ts).
+ */
+export type SurfaceModel = 'focus-only';
+
 export interface AppState {
   version: 1;
+  surfaceModel: SurfaceModel;
   onboarded: boolean;
   consentAt: number | null;
   policy: Policy;
